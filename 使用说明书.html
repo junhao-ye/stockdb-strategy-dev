@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>stockdb 策略开发技能 · 完整使用说明书</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2128; --line:#30363d; --line2:#21262d;
+  --tx:#e6edf3; --dim:#8b949e; --dim2:#6e7681;
+  --acc:#58a6ff; --ok:#3fb950; --warn:#d29922; --danger:#f85149; --vio:#a371f7;
+  --code-bg:#0b0f14;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{
+  margin:0;background:var(--bg);color:var(--tx);
+  font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+code,pre,.mono{font-family:Consolas,"SF Mono",Menlo,"Cascadia Code",monospace}
+
+/* ───────── 顶栏 ───────── */
+#top{
+  position:fixed;inset:0 0 auto 0;height:54px;z-index:50;
+  display:flex;align-items:center;gap:14px;padding:0 18px;
+  background:rgba(13,17,23,.92);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+#brand{font-size:14.5px;font-weight:700;white-space:nowrap;letter-spacing:.3px}
+#brand em{font-style:normal;color:var(--acc)}
+#stats{font-size:11.5px;color:var(--dim2);white-space:nowrap;display:flex;gap:12px}
+#stats b{color:var(--dim);font-weight:600}
+#sp{flex:1}
+#searchWrap{position:relative;display:flex;align-items:center}
+#q{
+  width:250px;background:var(--panel);border:1px solid var(--line);color:var(--tx);
+  border-radius:7px;padding:7px 30px 7px 30px;font-size:12.5px;font-family:inherit;outline:none;
+  transition:border-color .13s,width .13s;
+}
+#q:focus{border-color:var(--acc);width:310px}
+#searchWrap .ic{position:absolute;left:9px;color:var(--dim2);font-size:12px;pointer-events:none}
+#clr{
+  position:absolute;right:6px;background:none;border:none;color:var(--dim2);
+  cursor:pointer;font-size:14px;line-height:1;padding:3px 4px;display:none
+}
+#clr:hover{color:var(--tx)}
+#hits{font-size:11px;color:var(--dim2);white-space:nowrap;min-width:66px;text-align:right}
+kbd{
+  background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;
+  border-radius:4px;padding:1px 5px;font-size:10px;font-family:Consolas,monospace;color:var(--dim)
+}
+
+/* ───────── 布局 ───────── */
+#wrap{display:flex;padding-top:54px;min-height:100vh}
+#side{
+  width:288px;flex:0 0 288px;position:sticky;top:54px;height:calc(100vh - 54px);
+  overflow-y:auto;border-right:1px solid var(--line);background:#0f141a;padding:16px 0 40px
+}
+#side .ttl{
+  font-size:10.5px;color:var(--dim2);letter-spacing:1.2px;text-transform:uppercase;
+  padding:0 18px 9px;font-weight:700
+}
+#toc ul{list-style:none;margin:0;padding:0}
+#toc li{margin:0}
+#toc a{
+  display:block;color:var(--dim);text-decoration:none;font-size:12.5px;
+  padding:4px 18px 4px 18px;border-left:2px solid transparent;line-height:1.45;
+  transition:color .1s,border-color .1s,background .1s
+}
+#toc a:hover{color:var(--tx);background:#161c24}
+#toc a.on{color:var(--acc);border-left-color:var(--acc);background:#121a24;font-weight:600}
+#toc>ul>li>a{font-weight:600;color:var(--tx);opacity:.92;font-size:13px;margin-top:3px}
+#toc ul ul a{padding-left:33px;font-size:12px;color:var(--dim2)}
+#toc ul ul a:hover{color:var(--dim)}
+#toc a.hide{display:none}
+#side .foot{font-size:10.5px;color:var(--dim2);padding:16px 18px 0;border-top:1px solid var(--line2);margin-top:12px;line-height:1.6}
+
+#main{flex:1;min-width:0;display:flex;justify-content:center;padding:26px 34px 120px}
+#doc{max-width:880px;width:100%}
+
+/* ───────── 正文 ───────── */
+#doc h1{
+  font-size:26px;margin:4px 0 6px;line-height:1.3;font-weight:800;letter-spacing:-.2px
+}
+#doc h2{
+  font-size:20px;font-weight:700;margin:44px 0 14px;padding:0 0 9px;
+  border-bottom:1px solid var(--line);scroll-margin-top:66px
+}
+#doc h2:first-of-type{margin-top:26px}
+#doc h3{font-size:16px;font-weight:700;margin:28px 0 10px;color:#d7e3ee;scroll-margin-top:66px}
+#doc h4{font-size:14px;font-weight:700;margin:20px 0 8px;color:var(--dim);scroll-margin-top:66px}
+#doc p{margin:10px 0}
+#doc strong{color:#fff;font-weight:650}
+#doc em{color:var(--dim);font-style:normal;background:#1a212b;border-radius:3px;padding:0 4px}
+#doc a{color:var(--acc);text-decoration:none;border-bottom:1px solid rgba(88,166,255,.3)}
+#doc a:hover{border-bottom-color:var(--acc)}
+#doc hr{border:none;border-top:1px solid var(--line);margin:34px 0}
+#doc ul,#doc ol{padding-left:23px;margin:10px 0}
+#doc li{margin:5px 0}
+#doc li>ul,#doc li>ol{margin:5px 0}
+
+/* 引用块 —— 用作「提示条」，按 emoji 前缀着色 */
+#doc blockquote{
+  margin:14px 0;padding:11px 15px;border-radius:8px;
+  border-left:3px solid var(--acc);background:#121a24;color:#c9d6e2
+}
+#doc blockquote p{margin:5px 0}
+#doc blockquote p:first-child{margin-top:0}
+#doc blockquote p:last-child{margin-bottom:0}
+#doc blockquote strong{color:#fff}
+/* 危险 / 警告 类引用块（含 ❗ ⚠）改红色调 */
+#doc blockquote.danger{border-left-color:var(--danger);background:#1d1315}
+#doc blockquote.warn{border-left-color:var(--warn);background:#1d1a12}
+#doc blockquote.ok{border-left-color:var(--ok);background:#0f1a13}
+
+/* 表格 */
+#doc table{
+  border-collapse:separate;border-spacing:0;width:100%;margin:14px 0;
+  font-size:13px;border:1px solid var(--line);border-radius:8px;overflow:hidden
+}
+#doc thead th{
+  background:#1a212b;color:var(--dim);font-weight:700;text-align:left;
+  padding:9px 12px;border-bottom:1px solid var(--line);font-size:12px;
+  white-space:nowrap;position:relative
+}
+#doc tbody td{padding:8px 12px;border-bottom:1px solid var(--line2);vertical-align:top}
+#doc tbody tr:last-child td{border-bottom:none}
+#doc tbody tr:nth-child(even) td{background:#11161d}
+#doc tbody tr:hover td{background:#161d27}
+#doc td code,#doc th code{font-size:12px}
+#doc table code{white-space:nowrap}
+
+/* 代码 */
+#doc code{
+  background:#1a212b;color:#ffa657;font-size:12.5px;padding:1.5px 5px;border-radius:4px
+}
+#doc pre{
+  background:var(--code-bg);border:1px solid var(--line);border-radius:8px;
+  padding:13px 15px;overflow-x:auto;margin:13px 0;line-height:1.6
+}
+#doc pre code{
+  background:none;color:#c9d6e2;padding:0;font-size:12.5px;white-space:pre
+}
+/* 代码里的注释行淡显 */
+#doc pre code .cmt{color:var(--dim2)}
+
+/* 复选框清单 */
+#doc input[type=checkbox]{
+  appearance:none;-webkit-appearance:none;width:14px;height:14px;margin:0 7px 0 0;
+  border:1.5px solid var(--line);border-radius:4px;background:var(--panel);
+  vertical-align:-2px;cursor:pointer;position:relative;transition:all .12s
+}
+#doc input[type=checkbox]:hover{border-color:var(--acc)}
+#doc input[type=checkbox]:checked{background:var(--ok);border-color:var(--ok)}
+#doc input[type=checkbox]:checked::after{
+  content:"✓";position:absolute;inset:0;color:#0d1117;font-size:11px;
+  display:flex;align-items:center;justify-content:center;font-weight:800
+}
+#doc li:has(> input[type=checkbox]){list-style:none;margin-left:-19px}
+
+/* 搜索命中 */
+#doc mark.hit{background:#7a5c00;color:#ffe9a8;border-radius:3px;padding:0 2px}
+#doc .sec-off{display:none}
+
+/* 回到顶部 */
+#totop{
+  position:fixed;right:24px;bottom:24px;width:38px;height:38px;border-radius:50%;
+  background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+  cursor:pointer;font-size:15px;display:none;z-index:40;line-height:1
+}
+#totop:hover{color:var(--tx);border-color:var(--acc)}
+#totop.on{display:block}
+
+/* 窄屏 */
+@media (max-width:1080px){
+  #side{display:none}
+  #main{padding:20px 18px 100px}
+  #stats{display:none}
+  #q{width:170px}#q:focus{width:220px}
+}
+
+/* 滚动条 */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2b3340;border-radius:6px;border:2px solid var(--bg)}
+::-webkit-scrollbar-thumb:hover{background:#3c4655}
+
+@media print{
+  #top,#side,#totop{display:none!important}
+  #wrap{padding:0}#main{padding:0}
+  body{background:#fff;color:#000}
+  #doc pre,#doc table{border-color:#ccc}
+  #doc pre code{color:#000}
+}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <div id="brand">stockdb 策略开发 <em>·</em> 使用说明书</div>
+  <div id="stats">
+    <span><b>12</b> 章</span>
+    <span><b>65</b> 节</span>
+    <span><b>34</b> 表</span>
+    <span><b>27</b> 代码块</span>
+    <span><b>24,522</b> 字</span>
+  </div>
+  <div id="sp"></div>
+  <div id="hits"></div>
+  <div id="searchWrap">
+    <span class="ic">⌕</span>
+    <input id="q" type="text" placeholder="搜索全文…" autocomplete="off" spellcheck="false">
+    <button id="clr" title="清空">×</button>
+  </div>
+</div>
+
+<div id="wrap">
+  <nav id="side">
+    <div class="ttl">目录</div>
+    <div id="toc"><div class="toc"><ul>
+<li><a href="#_1">目录</a></li>
+<li><a href="#1">第 1 章 认识这个技能</a><ul>
+<li><a href="#11">1.1 一句话定位</a></li>
+<li><a href="#12">1.2 能力边界</a></li>
+<li><a href="#13">1.3 什么时候该用它</a></li>
+<li><a href="#14">1.4 三条铁律（违反必出问题）</a></li>
+</ul>
+</li>
+<li><a href="#2">第 2 章 环境准备</a><ul>
+<li><a href="#21-stockdb">2.1 stockdb 是什么</a></li>
+<li><a href="#22">2.2 启动顺序</a></li>
+<li><a href="#23">2.3 连通性自检</a></li>
+<li><a href="#24">2.4 三种接入通道怎么选</a></li>
+<li><a href="#25">2.5 依赖要求</a></li>
+</ul>
+</li>
+<li><a href="#3-5">第 3 章 5 分钟跑通第一个策略</a><ul>
+<li><a href="#31">3.1 复制脚本到你的项目目录</a></li>
+<li><a href="#32">3.2 三条命令</a></li>
+<li><a href="#33">3.3 交付物一览</a></li>
+</ul>
+</li>
+<li><a href="#4">第 4 章 取数协议（核心）</a><ul>
+<li><a href="#41">4.1 键结构</a></li>
+<li><a href="#42-k1-k2">4.2 k1 / k2 算子表</a></li>
+<li><a href="#43">4.3 ★ 批量取数首选写法</a></li>
+<li><a href="#44">4.4 性能：三代演进（均实测）</a></li>
+<li><a href="#45">4.5 ★ 返回体字段名（高频事故点）</a></li>
+<li><a href="#46-vs">4.6 通道边界：本地 vs 在线</a></li>
+<li><a href="#47">4.7 三个本地加工接口（不要自己手搓）</a></li>
+<li><a href="#48-python-sdk">4.8 Python SDK 速记</a></li>
+<li><a href="#49">4.9 私有数据硬约束</a></li>
+</ul>
+</li>
+<li><a href="#5">第 5 章 标的池</a><ul>
+<li><a href="#51">5.1 前缀法本身就是纯股票池</a></li>
+<li><a href="#52">5.2 兜底正则（仅在数据源变化或误用前缀时才需要）</a></li>
+<li><a href="#53">5.3 限定板块子集</a></li>
+<li><a href="#54">5.4 改过滤规则的铁律</a></li>
+</ul>
+</li>
+<li><a href="#6">第 6 章 写一个策略</a><ul>
+<li><a href="#61-4">6.1 换策略的标准动作（4 步）</a></li>
+<li><a href="#62">6.2 换策略族 = 重新设计，不是调参</a></li>
+<li><a href="#63">6.3 重标定四步法</a></li>
+<li><a href="#64">6.4 条件写法族（可直接组合）</a></li>
+<li><a href="#65">6.5 涨停判定的三种口径</a></li>
+<li><a href="#66">6.6 获利筹码近似</a></li>
+<li><a href="#67">6.7 ★ 排除类条件：先验证它「有没有在起作用」</a></li>
+<li><a href="#68">6.8 ★★ 评分维度：先算「方差贡献」，别让权重变成摆设</a></li>
+<li><a href="#69">6.9 排序主键 ≠ 评分：两者都要时怎么办</a></li>
+<li><a href="#610">6.10 「零共振」是正常结果</a></li>
+<li><a href="#611-cfg">6.11 CFG 参数调优经验</a></li>
+</ul>
+</li>
+<li><a href="#7">第 7 章 做一块看板</a><ul>
+<li><a href="#71-dom">7.1 六项能力（不是六块 DOM）</a></li>
+<li><a href="#72">7.2 三种版式（都实测通过）</a></li>
+<li><a href="#73-7899">7.3 浏览器直连 7899 的三条注意</a></li>
+<li><a href="#74-svg">7.4 图表做法（无依赖 SVG）</a></li>
+<li><a href="#75">7.5 交互与筛选</a></li>
+<li><a href="#76">7.6 配色与验证</a></li>
+</ul>
+</li>
+<li><a href="#8">第 8 章 脚本手册</a><ul>
+<li><a href="#81">8.1 执行顺序</a></li>
+<li><a href="#82-fetch_alljs-k">8.2 fetch_all.js — 全市场日 K 批量取数</a></li>
+<li><a href="#83-fetch_allpy-python-sdk">8.3 fetch_all.py — Python SDK 等价版</a></li>
+<li><a href="#84-screenjs">8.4 screen.js — 筛选引擎模板</a></li>
+<li><a href="#85-make_reportjs-markdown">8.5 make_report.js — 生成 Markdown 报告</a></li>
+<li><a href="#86-selftestjs">8.6 selftest.js — 页面与引擎一致性自检</a></li>
+<li><a href="#87-build_dashboardtemplatehtml">8.7 build_dashboard.template.html</a></li>
+</ul>
+</li>
+<li><a href="#9">第 9 章 自检与交付</a><ul>
+<li><a href="#91">9.1 交付前检查清单</a></li>
+<li><a href="#92">9.2 换族检查清单（换策略类型时额外过一遍）</a></li>
+</ul>
+</li>
+<li><a href="#10">第 10 章 排错速查</a></li>
+<li><a href="#a">附录 A 踩坑全记录</a><ul>
+<li><a href="#a1">A.1 三个高频既踩之坑</a></li>
+<li><a href="#a2-90-95">A.2 标的池事故：9[0-9]{5} 误杀北交所</a></li>
+<li><a href="#a3-etf">A.3 ETF 霸榜</a></li>
+<li><a href="#a4-100">A.4 筹码恒 100%</a></li>
+<li><a href="#a5">A.5 银行股排第一</a></li>
+<li><a href="#a6-30-1">A.6 维度饱和：写了 30% 权重，实际贡献 1%</a></li>
+<li><a href="#a7-bug">A.7 字段名事故：自检查不出的 bug</a></li>
+<li><a href="#a8">A.8 自检本身也会误报</a></li>
+<li><a href="#a9">A.9 别把公式硬编码进自检</a></li>
+</ul>
+</li>
+<li><a href="#b">附录 B 权威文档与版本历史</a><ul>
+<li><a href="#b1">B.1 权威参照（按可信度）</a></li>
+<li><a href="#b2">B.2 官方硬规则摘要</a></li>
+<li><a href="#b3">B.3 已知文档缺陷（上游）</a></li>
+<li><a href="#b4">B.4 技能版本历史</a></li>
+<li><a href="#b5">B.5 本说明书覆盖的文件地图</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+    <div class="foot">
+      <kbd>⌘/Ctrl</kbd>+<kbd>K</kbd> 搜索 &nbsp;·&nbsp; <kbd>Esc</kbd> 清空<br>
+      <kbd>J</kbd> / <kbd>K</kbd> 上下章 &nbsp;·&nbsp; <kbd>G</kbd> 回顶
+    </div>
+  </nav>
+
+  <main id="main">
+    <article id="doc">
+<h1 id="stockdb">stockdb 策略开发技能 · 完整使用说明书</h1>
+<blockquote>
+<p><strong>版本</strong> v2.4.0 ｜ <strong>适用</strong> stockdb 本地行情库（<code>stockdb.exe</code> 监听 <code>127.0.0.1:7899</code>）
+<strong>定位</strong> 从「本地行情库」到「选股策略」再到「策略看板」的端到端开发手册
+<strong>读者</strong> 使用本技能的人（<code>SKILL.md</code> 是给 agent 的运行时路由，本文件是给人的完整手册）</p>
+</blockquote>
+<hr />
+<hr />
+<h2 id="1">第 1 章 认识这个技能</h2>
+<h3 id="11">1.1 一句话定位</h3>
+<blockquote>
+<p>在<strong>本机</strong>的 stockdb 行情库上，用<strong>受验证的取数协议</strong>批量拉全市场日 K，
+写<strong>筛选条件与评分模型</strong>，产出<strong>结果集 + 报告 + 离线看板</strong>，并有<strong>自检</strong>兜底。</p>
+</blockquote>
+<h3 id="12">1.2 能力边界</h3>
+<table>
+<thead>
+<tr>
+<th>✅ 能做</th>
+<th>❌ 不能做</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全市场日 K / 分钟 K / 复权 / 周月 K 批量取数</td>
+<td>真实筹码分布（需外接数据源，本地只有近似）</td>
+</tr>
+<tr>
+<td>技术指标（MACD/KDJ/RSI/BOLL/MA）批量计算</td>
+<td>财务三表、因子、资金流（在线接口，有配额）</td>
+</tr>
+<tr>
+<td>板块映射（股票 ↔ 板块）</td>
+<td>跨时点比较筹码（近似值只在同一时点可比）</td>
+</tr>
+<tr>
+<td>任意条件选股、评分排序、漏斗计数</td>
+<td>交易下单、实时行情推送</td>
+</tr>
+<tr>
+<td>单文件离线看板（含图表、下钻、组合构建）</td>
+<td>回测框架（本技能不提供收益回测）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13">1.3 什么时候该用它</h3>
+<p><strong>触发词</strong>：<code>stockdb</code>、<code>7899</code>、<code>本地行情库</code>、<code>gp.js</code>、<code>stock_sdk</code>、<code>rd.vals</code>、<code>rd.get_data</code>、
+<code>zb.get</code>、<code>bk.get</code>、<code>选股策略</code>、<code>条件选股</code>、<code>策略页面</code>、<code>策略看板</code>、<code>全市场筛选</code>、
+<code>筹码分布</code>、<code>主力洗盘</code>、<code>拉升前夜</code>、<code>换手率排名</code>、<code>连续涨停</code>、<code>批量取日K</code></p>
+<p><strong>典型请求</strong>：</p>
+<ul>
+<li>「帮我写一个选股条件，找出主力洗盘后即将拉升的股票」</li>
+<li>「用本地数据库把全市场日 K 拉下来」</li>
+<li>「做一个策略结果看板页面」</li>
+<li>「这几个条件筛选一下，再按 XX 排序」</li>
+</ul>
+<h3 id="14">1.4 三条铁律（违反必出问题）</h3>
+<ol>
+<li><strong>取数走 <code>rd</code> 通道</strong>（裸 HTTP 或 Python <code>stock_sdk.rd</code>）——<strong>不要用 <code>gp.js</code></strong>。
+   那个有授权门禁，Node 下必抛 <code>SDK校验失败</code>。裸协议与 Python SDK <strong>都无门禁</strong>。</li>
+<li><strong>全市场用「代码前缀 × 日期区间」</strong>，4 个请求取回整段历史。
+   <strong>不要写按日循环、不要写代码分片。</strong></li>
+<li><strong>策略只用本地通道</strong>（<code>rd</code> / <code>zb</code> / <code>bk</code> / <code>rd.get_data</code>）。
+   财务、因子、资金流、<code>get_price</code> 是<strong>在线接口、有配额</strong>，批量取数会失败。</li>
+</ol>
+<hr />
+<h2 id="2">第 2 章 环境准备</h2>
+<h3 id="21-stockdb">2.1 stockdb 是什么</h3>
+<p>一个<strong>单机运行的 A 股行情数据库</strong>，把历史日 K / 分钟 K / 复权数据装进本地 LevelDB，
+通过一个 HTTP 服务对外提供查询。<strong>免密、离线、无限量。</strong></p>
+<pre><code>&lt;stockdb 目录&gt;/
+├── stockdb.exe          开库 + 起 HTTP 服务（监听 127.0.0.1:7899）
+├── 数据更新.exe          从上游同步最新行情
+├── data/  data1/         LevelDB 数据（合计约 25 GB）
+├── mydb/                 私有数据区（写因子/缓存只能写这里）
+├── stockdb.conf          配置（含端口）
+└── 调用方式/
+    ├── http/            裸 HTTP 示例（rd_test.py）
+    ├── python/          ★ Python SDK（stock_sdk）+ 最权威接口文档（1672 行）
+    ├── ai_自动开发文档/   JS 侧规则与口径文档
+    └── ai_mcp/          MCP 服务（41 工具，多数包在线接口）
+</code></pre>
+<blockquote>
+<p>路径因机器而异，<strong>不要硬编码</strong>。本机参考路径：<code>D:\baidunetdiskdownload\stockdb</code></p>
+</blockquote>
+<h3 id="22">2.2 启动顺序</h3>
+<pre><code class="language-bash"># 1) 先同步数据（可选，看你要不要最新交易日）
+&quot;&lt;stockdb&gt;/数据更新.exe&quot;
+
+# 2) 再开库（必须，否则 7899 连不上）
+&quot;&lt;stockdb&gt;/stockdb.exe&quot;
+</code></pre>
+<h3 id="23">2.3 连通性自检</h3>
+<p><strong>一次调用同时验证「服务在线 + 数据可用 + 取数语法正确」</strong>：</p>
+<pre><code class="language-bash">curl -s &quot;http://127.0.0.1:7899/?cmd=vals&amp;t=%E6%97%A5k&amp;k1=all:&amp;k2=key:20260930&amp;json=1&quot; | head -c 200
+</code></pre>
+<p>预期返回一个对象数组。若返回：</p>
+<table>
+<thead>
+<tr>
+<th>返回</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{"error":"only get/vals/keys/len/reload commands supported"}</code></td>
+<td>服务在线，但 <code>cmd</code> 拼错了</td>
+</tr>
+<tr>
+<td>空 / 连接拒绝</td>
+<td><code>stockdb.exe</code> 没启动</td>
+</tr>
+<tr>
+<td>乱码二进制</td>
+<td>漏了 <code>&amp;json=1</code></td>
+</tr>
+<tr>
+<td><code>[]</code></td>
+<td>语法错（多半是把通配符塞进了冒号链），见 §4.2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="24">2.4 三种接入通道怎么选</h3>
+<table>
+<thead>
+<tr>
+<th>通道</th>
+<th>门禁</th>
+<th>适合</th>
+<th>本技能用法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>裸 HTTP</strong></td>
+<td>无</td>
+<td>Node 脚本、浏览器直连、快速验证</td>
+<td>★ 默认，<code>scripts/fetch_all.js</code></td>
+</tr>
+<tr>
+<td><strong>Python SDK</strong></td>
+<td>无</td>
+<td>已在 Python 环境、要指标/复权</td>
+<td>★ 默认，<code>scripts/fetch_all.py</code></td>
+</tr>
+<tr>
+<td><code>gp.js</code>（JS SDK）</td>
+<td><strong>有</strong></td>
+<td>—</td>
+<td>❌ <strong>不要用</strong>，Node 下抛 <code>SDK校验失败</code></td>
+</tr>
+<tr>
+<td>MCP（41 工具）</td>
+<td>无</td>
+<td>交互式探索</td>
+<td>⚠ 多数包在线接口，<strong>批量取数不要走它</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="25">2.5 依赖要求</h3>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>要求</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Node</td>
+<td>≥ 18</td>
+<td>脚本<strong>零第三方依赖</strong>，只用 <code>http</code>/<code>fs</code>/<code>path</code></td>
+</tr>
+<tr>
+<td>Python</td>
+<td>3.12+</td>
+<td>需能 <code>import stock_sdk</code>（把 <code>pybao/</code> 加进 <code>PYTHONPATH</code> 或设 <code>PYBAO</code>）</td>
+</tr>
+<tr>
+<td>浏览器</td>
+<td>现代</td>
+<td>看板是单文件 HTML，双击即开</td>
+</tr>
+</tbody>
+</table>
+<p>Python SDK 的引入方式：</p>
+<pre><code class="language-python">import sys; sys.path.insert(0, r'&lt;stockdb&gt;/pybao')   # 或设环境变量 PYTHONPATH / PYBAO
+from stock_sdk import rd, zb, bk                      # 无授权门禁
+</code></pre>
+<hr />
+<h2 id="3-5">第 3 章 5 分钟跑通第一个策略</h2>
+<h3 id="31">3.1 复制脚本到你的项目目录</h3>
+<blockquote>
+<p>⚠ <strong>不要原地改技能文件。</strong> 技能的 <code>scripts/</code> 是模板，改坏了下次就没得用。</p>
+</blockquote>
+<pre><code class="language-bash">mkdir my-strategy &amp;&amp; cd my-strategy
+cp &quot;&lt;skills&gt;/stockdb-strategy-dev/scripts/fetch_all.js&quot; .
+cp &quot;&lt;skills&gt;/stockdb-strategy-dev/scripts/screen.js&quot; .
+cp &quot;&lt;skills&gt;/stockdb-strategy-dev/scripts/make_report.js&quot; .
+cp &quot;&lt;skills&gt;/stockdb-strategy-dev/scripts/selftest.js&quot; .
+cp &quot;&lt;skills&gt;/stockdb-strategy-dev/scripts/build_dashboard.template.html&quot; 策略看板.html
+</code></pre>
+<h3 id="32">3.2 三条命令</h3>
+<pre><code class="language-bash"># 1) 取数 → _cache/kline.json（4 请求 / 约 7 秒）
+node fetch_all.js
+
+# 2) 筛选 → result.json + result.json.js
+node screen.js
+
+# 3) 报告 → 筛选结果报告.md
+node make_report.js
+
+# 4) 自检（改完页面后跑）
+node selftest.js
+</code></pre>
+<p><code>fetch_all.js</code> 的预期输出：</p>
+<pre><code>[历] 共 6321 天, 取近 130 天: 20260325 ~ 20260930
+[任务] 4 个前缀 × 1 次区间请求 = 4 请求（区间 20260325&lt;20260930）
+  0*       193204 条  2.1s
+  3*        ...
+[完] 抓到 5494 只 → 保留 5494 只（含北交所 308 只；剔除 0）
+     / 记录 713338 条 / 错 0 / 耗时 7.2s
+</code></pre>
+<h3 id="33">3.3 交付物一览</h3>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_cache/kline.json</code></td>
+<td>全市场日 K（精简字段）</td>
+</tr>
+<tr>
+<td><code>_cache/_calendar.json</code></td>
+<td>交易日列表</td>
+</tr>
+<tr>
+<td><code>result.json</code></td>
+<td>完整结果：meta + cfg + hits + rejected + 漏斗</td>
+</tr>
+<tr>
+<td><code>result.json.js</code></td>
+<td><code>window.STRATEGY_RESULT=…</code>，<strong>页面离线加载用</strong></td>
+</tr>
+<tr>
+<td><code>筛选结果报告.md</code></td>
+<td>人类可读报告</td>
+</tr>
+<tr>
+<td><code>策略看板.html</code></td>
+<td>单文件离线看板</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4">第 4 章 取数协议（核心）</h2>
+<h3 id="41">4.1 键结构</h3>
+<p>日 K 表的键是<strong>两段式</strong>：<code>表:key1:key2</code> = <code>日k:代码:日期</code>。</p>
+<blockquote>
+<p>❗ <strong>不要把通配符塞进冒号链。</strong> <code>t=日k:*:20260930</code> 会返回 <code>[]</code>。
+通配要用 <code>k1</code> / <code>k2</code> 参数表达。</p>
+</blockquote>
+<h3 id="42-k1-k2">4.2 <code>k1</code> / <code>k2</code> 算子表</h3>
+<table>
+<thead>
+<tr>
+<th>算子</th>
+<th>语义</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>all:</code></td>
+<td>该段全匹配</td>
+<td><code>k1=all:</code> = 全部代码</td>
+</tr>
+<tr>
+<td><code>key:X</code></td>
+<td>精确匹配</td>
+<td><code>k1=key:000001</code></td>
+</tr>
+<tr>
+<td><code>qz:X</code></td>
+<td><strong>前缀</strong>匹配</td>
+<td><code>k1=qz:6</code> → 6 开头全部</td>
+</tr>
+<tr>
+<td><code>fwd:a,b</code></td>
+<td>正区间（含两端）</td>
+<td><code>k2=fwd:20260325,20260930</code></td>
+</tr>
+<tr>
+<td><code>fwd:a,N</code></td>
+<td>a 起至最新</td>
+<td><code>k2=fwd:20260901,N</code></td>
+</tr>
+<tr>
+<td><code>fwz:a,b</code></td>
+<td>同区间反序</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>💡 <code>qz:</code> 本身就带「前缀」语义，所以<strong>尾部的 <code>*</code> 要剥掉</strong>：写 <code>PREFIXES=0*</code>，
+拼 URL 时转成 <code>k1=qz:0</code>（不是 <code>qz:0*</code>）。</p>
+</blockquote>
+<h3 id="43">4.3 ★ 批量取数首选写法</h3>
+<pre><code class="language-bash">BASE=http://127.0.0.1:7899
+
+# 前缀 × 日期区间：每个前缀 1 个请求，覆盖该前缀全部票的整段历史
+GET /?cmd=vals&amp;t=日k&amp;k1=qz:0&amp;k2=fwd:20260325,20260930&amp;json=1     # → 193,204 条
+</code></pre>
+<p>其他常用形态：</p>
+<pre><code class="language-bash">GET /?cmd=vals&amp;t=日k&amp;k1=all:&amp;k2=key:20260930&amp;json=1              # 全市场单日
+GET /?cmd=vals&amp;t=日k&amp;k1=key:000001&amp;k2=qz:202609&amp;json=1           # 单票某月
+GET /?cmd=keys&amp;t=日k&amp;k1=key:000001&amp;k2=all:&amp;json=1                # 键名（推交易日历）
+GET /?cmd=get&amp;t=股票代码&amp;json=1                                   # 元数据
+</code></pre>
+<p><strong><code>&amp;json=1</code> 必须加</strong>，否则返回 LevelDB 二进制。</p>
+<h3 id="44">4.4 性能：三代演进（均实测）</h3>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>请求数</th>
+<th>耗时</th>
+<th>记录</th>
+<th>股票池</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>交易日 × 50 代码分片</td>
+<td>19,500</td>
+<td>11.0s</td>
+<td>972,846</td>
+<td>5184</td>
+</tr>
+<tr>
+<td>交易日 × <code>k1=all:</code></td>
+<td>130</td>
+<td>8.1s</td>
+<td>973,580</td>
+<td>5186</td>
+</tr>
+<tr>
+<td><strong>前缀 × 日期区间</strong></td>
+<td><strong>4</strong></td>
+<td><strong>7.2s</strong></td>
+<td><strong>713,338</strong></td>
+<td><strong>5494</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠ <strong>早期版本的错误结论（已作废）</strong>：「不能一次取全市场某日，只能按代码分片 × 按日循环」。
+这个错判导致 <code>fetch_all.js</code> v1 写了二维分片、<strong>19,500 次请求</strong>。v3 只要 <strong>4 次</strong>。
+如果你看到任何文档写「全市场重算 = 19630 请求、务必 CHUNK=50 + 并发 6」，那是 v1 遗留。</p>
+</blockquote>
+<p><strong>区间可以很长</strong>：实测 <code>0*</code> 前缀单请求取 2020-01-01 ~ 2026-09-30 → <strong>2,409,141 条 / 4.7 秒</strong>。</p>
+<p><strong>不需要并发</strong>：服务是本机单进程 LevelDB，v3 只有 4 个请求，串行即可。</p>
+<h3 id="45">4.5 ★ 返回体字段名（高频事故点）</h3>
+<p><code>cmd=vals</code> 默认返回<strong>具名对象数组</strong>，字段是全名：</p>
+<pre><code class="language-json">[{&quot;code&quot;:&quot;300870&quot;,&quot;date&quot;:20200824,&quot;open&quot;:75,&quot;high&quot;:97.65,&quot;low&quot;:66.26,&quot;close&quot;:85,
+  &quot;pre_close&quot;:25.446,&quot;volume&quot;:13003363,&quot;amount&quot;:993162048,&quot;turnover&quot;:54.1915,
+  &quot;pct_chg&quot;:130.916,&quot;amplitude&quot;:85.28,&quot;float_share&quot;:23995199,
+  &quot;float_mv&quot;:1455783413.189,&quot;total_mv&quot;:6139781604.426,&quot;total_share&quot;:101200000,
+  &quot;name&quot;:&quot;欧陆通&quot;,&quot;is_st&quot;:false,&quot;pe_ttm&quot;:53.918313,&quot;pb&quot;:15.840099,
+  &quot;vol_ratio&quot;:null}, ...]
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>要点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>字段是<strong>全名</strong></td>
+<td><code>date/open/high/low/close/volume/turnover/name/is_st</code></td>
+</tr>
+<tr>
+<td><code>date</code> 是<strong>数字</strong></td>
+<td><code>20260930</code>，不是 <code>"2026-09-30"</code> → 展示前要格式化</td>
+</tr>
+<tr>
+<td><code>name</code> / <code>is_st</code> <strong>自带</strong></td>
+<td>不必另开接口查名称</td>
+</tr>
+<tr>
+<td>位置数组<strong>只在 <code>ap=</code> 投影时</strong>出现</td>
+<td>默认不要按数组解</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>❗ <strong>高频事故</strong>：页面/脚本里写 <code>r.c</code>、<code>r.d</code>、<code>r.v</code> 取字段 → <strong>全部 <code>undefined</code></strong>，
+图表静默变空白或显示 <code>undefined</code>，而<strong>语法检查不报错</strong>。
+实测踩过：烛台图显示 <code>undefined → undefined</code>，<code>node --check</code> 与自检<strong>全绿</strong>。</p>
+</blockquote>
+<p><strong>稳健写法</strong>（兼容数组 / 短键 / 全名三种形态）：</p>
+<pre><code class="language-js">const pickf = (r, ...keys) =&gt; { for (const k of keys) if (r[k] != null) return r[k]; return undefined; };
+const norm = (r) =&gt; Array.isArray(r)
+  ? { d: r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[5] }
+  : { d: pickf(r,'d','date'),  o: +pickf(r,'o','open'),   h: +pickf(r,'h','high'),
+      l: +pickf(r,'l','low'),  c: +pickf(r,'c','close'),  v: +pickf(r,'v','volume') };
+</code></pre>
+<blockquote>
+<p>✅ <strong>交付前必须截图验真</strong>（见 §7.6）。<code>fetch_all.js</code> 落盘的 <code>kline.json</code> 用的是<strong>短键</strong>
+（<code>{d,c,pc,o,h,l,v,a,to,p,am,st,fsh,fmv,n}</code>），和接口返回的全名不同 —— 两者都要小心。</p>
+</blockquote>
+<h3 id="46-vs">4.6 通道边界：本地 vs 在线</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>通道</th>
+<th>内容</th>
+<th>额度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅</td>
+<td><code>rd.get</code> / <code>vals</code> / <code>keys</code> / <code>pipe</code></td>
+<td><code>日k</code> <code>分钟k</code> <code>复权</code> <code>股票代码</code> <code>退市</code></td>
+<td><strong>本地、无限量、可离线</strong></td>
+</tr>
+<tr>
+<td>✅</td>
+<td><code>rd.get_data(...)</code></td>
+<td>真复权（<code>fq='qfq'/'hfq'/None</code>）、周/月 K（<code>frequency='1w'/'1M'</code>）</td>
+<td>本地</td>
+</tr>
+<tr>
+<td>✅</td>
+<td><code>zb.get(...)</code></td>
+<td>批量技术指标 <code>macd</code>/<code>kdj</code>/<code>rsi</code>/<code>boll</code>/<code>ma</code></td>
+<td>本地</td>
+</tr>
+<tr>
+<td>✅</td>
+<td><code>bk.get(...)</code></td>
+<td>板块映射（股票↔板块，含成分股）</td>
+<td>本地</td>
+</tr>
+<tr>
+<td>❌</td>
+<td><code>get_price</code> <code>get_bars</code> <code>get_trade_days</code> <code>get_all_securities</code></td>
+<td>结构化行情</td>
+<td><strong>在线，有配额</strong></td>
+</tr>
+<tr>
+<td>❌</td>
+<td><code>alpha</code> <code>get_factor_values</code> <code>MACD</code> <code>KDJ</code></td>
+<td>因子 / 指标</td>
+<td><strong>在线</strong></td>
+</tr>
+<tr>
+<td>❌</td>
+<td><code>get_money_flow</code> <code>get_mtss</code> <code>get_billboard_list</code> <code>get_locked_shares</code></td>
+<td>资金 / 事件</td>
+<td><strong>在线</strong></td>
+</tr>
+<tr>
+<td>❌</td>
+<td><code>valuation</code> <code>income</code> <code>balance</code> <code>cash_flow</code> <code>indicator</code> <code>macro</code></td>
+<td>财务 / 宏观</td>
+<td><strong>在线</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>在线接口失配时不返回数据</strong>，且<strong>两种形态都要检查</strong>：</p>
+<pre><code class="language-python">'测试期超2000次，…'      # ① 配额提示字符串
+{'error': '…'}          # ② 业务错误字典 ← 不一定抛异常！
+</code></pre>
+<blockquote>
+<p>👉 <strong>写策略一律只用本地通道。</strong> 官方要求：批量历史行情必须用本地 <code>stockdb.exe + rd</code>。</p>
+</blockquote>
+<h3 id="47">4.7 三个本地加工接口（不要自己手搓）</h3>
+<p>官方规则：复权 / 周月 K / 分钟聚合<strong>必须</strong>用 <code>rd.get_data()</code>。</p>
+<pre><code class="language-python">kd     = rd.get_data(['000001'], start='20260101', end='20260930', frequency='1w', fq='qfq')
+macd   = zb.get('macd', kd)          # 复用已加载行情，不再访问数据库
+boards = bk.get('000001')
+</code></pre>
+<blockquote>
+<p>⚠ <code>zb.get</code> 两个陷阱：
+① 只传 codes <strong>不传 <code>end</code></strong> → 默认只算 <code>20260302</code> 那一天；
+② 传 <code>original</code> 时 <code>start/end/frequency/fq</code> <strong>失效</strong>，且不接受无列名的位置矩阵（须 <code>fields=None</code>）。</p>
+</blockquote>
+<h3 id="48-python-sdk">4.8 Python SDK 速记</h3>
+<table>
+<thead>
+<tr>
+<th><code>QueryResult</code> 方法</th>
+<th>返回</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>.do()</code></strong></td>
+<td><strong><code>list[dict]</code></strong> ← 要 dict 就用这个</td>
+</tr>
+<tr>
+<td><code>.vals()</code></td>
+<td><code>list[list]</code> —— <strong>纯数组、无字段名</strong>（照 dict 解析会静默全 0）</td>
+</tr>
+<tr>
+<td><code>.keys()</code></td>
+<td>字段名</td>
+</tr>
+<tr>
+<td><code>.url()</code></td>
+<td><strong>反查等效 HTTP</strong> ← 学语法最快的办法</td>
+</tr>
+</tbody>
+</table>
+<p><strong>服务端参数</strong>（在服务端执行，别下载后再处理）：</p>
+<table>
+<thead>
+<tr>
+<th>写法</th>
+<th>转成 HTTP</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>q[:N]</code> / <code>q[-N:]</code></td>
+<td><code>&amp;num=N</code></td>
+<td>切片（<code>-N</code> 取最新 N 条）</td>
+</tr>
+<tr>
+<td><code>q.get('a,b,c')</code></td>
+<td><code>&amp;ap=get.a,b,c</code></td>
+<td>投影（返回<strong>位置数组</strong>，不是 dict）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="49">4.9 私有数据硬约束</h3>
+<p>因子 / 缓存 / 策略结果<strong>必须</strong>用 <code>rd.set()</code> / <code>rd.pipe().mset()</code> 写进 <code>./mydb</code>。</p>
+<blockquote>
+<p>❌ <strong>严禁</strong>自建 SQLite / MySQL / DuckDB / Parquet —— 官方列为「严重错误」。
+批量写入必须走 <code>pipe</code>。</p>
+</blockquote>
+<hr />
+<h2 id="5">第 5 章 标的池</h2>
+<h3 id="51">5.1 前缀法本身就是纯股票池</h3>
+<p><code>0*</code> + <code>3*</code> + <code>6*</code> + <code>920*</code> —— <code>1*</code> / <code>5*</code>（基金/债券/ETF）<strong>根本取不到</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>前缀</th>
+<th>覆盖</th>
+<th>实测只数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0*</code></td>
+<td>深主板 / 中小：000 / 001 / 002 / 003</td>
+<td>1488</td>
+</tr>
+<tr>
+<td><code>3*</code></td>
+<td>创业板：300 / 301 / <strong>302</strong></td>
+<td>1395</td>
+</tr>
+<tr>
+<td><code>6*</code></td>
+<td>沪主板 + <strong>科创板</strong>：600/601/603/605 / <strong>688/689</strong></td>
+<td>2303</td>
+</tr>
+<tr>
+<td><code>920*</code></td>
+<td>北交所（老段 43x/83x/87x 已迁移）</td>
+<td>308</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>合计</strong></td>
+<td><strong>5494</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>ETF / 基金 / 转债零污染</strong>，<strong>无需事后正则过滤</strong>。科创板默认保留；<code>302</code> 是创业板新增段，别漏。</p>
+<h3 id="52">5.2 兜底正则（仅在数据源变化或误用前缀时才需要）</h3>
+<pre><code class="language-js">if (/^(159|16[0-9]|18[0-9]|50[0-9]|51[0-9]|52[0-9]|55[0-9]|56[0-9]|58[0-9]|11[0-9]|12[0-9]|204|900)/.test(code)) return false;
+if (/ETF|LOF|REIT|基金|转债|债/i.test(name || '')) return false;
+</code></pre>
+<blockquote>
+<p>❗ <strong>绝不能写 <code>9[0-9]{5}</code></strong> —— <code>9*</code> 段实测 308 只<strong>全是 920xxx 北交所</strong>、B 股 0 只。
+那会<strong>整段误杀北交所</strong>（本技能曾犯此错，修复后命中数 C1 90→92、C2 47→46）。
+B 股只有 <code>900xxx</code>。</p>
+</blockquote>
+<h3 id="53">5.3 限定板块子集</h3>
+<p>用<strong>前缀白名单</strong>，<strong>绝不要加 <code>$</code></strong>：</p>
+<pre><code class="language-js">function boardOf(code) {                    // ← 不要写成 /^(300|301|302)$/
+  if (/^(300|301|302)/.test(code)) return '创业板';
+  if (/^(600|601|603|605)/.test(code)) return '沪主板';
+  if (/^(000|001|002|003)/.test(code)) return '深主板';
+  return null;                              // 688/689、920 等 → 不收
+}
+</code></pre>
+<blockquote>
+<p>❗ <strong>策略池变成 0 只 ⇒ 第一个怀疑这个正则的 <code>$</code>。</strong>
+实测踩过：加了 <code>$</code> 后 <code>/^(300|301|302)$/</code> 匹配不到 <code>300001</code>，5494 只被全部剔除。</p>
+</blockquote>
+<h3 id="54">5.4 改过滤规则的铁律</h3>
+<p><strong>过滤规则改动会静默改变选股结果。</strong> 改完必须：</p>
+<ol>
+<li>重跑并<strong>对比命中数</strong>变化；</li>
+<li>跑 <code>selftest.js</code> <strong>第 9 组</strong>（专门拦「某板块被整段误杀」）。</li>
+</ol>
+<hr />
+<h2 id="6">第 6 章 写一个策略</h2>
+<h3 id="61-4">6.1 换策略的标准动作（4 步）</h3>
+<ol>
+<li><strong>新建项目目录</strong>，把需要的脚本<strong>复制过去</strong>再改 —— <strong>不要原地改技能文件</strong>；</li>
+<li><strong>条件段整段替换</strong>（不是改阈值），<code>CFG</code> 按新策略重写；</li>
+<li><strong>换策略族必读</strong> <code>references/strategy-variants.md</code> 重标评分方向，<strong>不照抄示例权重</strong>；</li>
+<li>样例值（<code>days=3</code>、<code>maxGain=7</code>、<code>minChip=70</code>）<strong>只是能跑通的默认值</strong>，不代表任何推荐。</li>
+</ol>
+<blockquote>
+<p>📌 <strong>技能里没有「写死的策略」。</strong> <code>screen.js</code> 自带的「三条件 · 洗盘拉升」是<strong>样例</strong>，
+不是技能在推行这个策略。骨架（取数以外）才是复用价值：标的池过滤、筹码近似、
+评分框架、输出契约、漏斗计数。</p>
+</blockquote>
+<h3 id="62">6.2 换策略族 = 重新设计，不是调参</h3>
+<p><strong>有些维度方向直接相反</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>洗盘拉升</th>
+<th>超跌反转</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>均线状态</td>
+<td><strong>要粘合</strong></td>
+<td><strong>剔除粘合</strong>（&lt;5% 直接淘汰）</td>
+</tr>
+<tr>
+<td>换手率</td>
+<td><strong>要活跃</strong></td>
+<td><strong>要死寂</strong>（0% 才满分）</td>
+</tr>
+<tr>
+<td>位置</td>
+<td>区间 <strong>25~75 分位</strong>（中位最佳）</td>
+<td><strong>越低越好</strong>（破 MA120 达 10%+）</td>
+</tr>
+<tr>
+<td>量能</td>
+<td>要<strong>抬头</strong></td>
+<td>要<strong>创新低</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>方向互斥必须显式处理</strong>：不能靠「权重调小」兼容，<strong>必须换掉该维度的计分函数</strong>
+（或直接改成排除条件）。</p>
+<h3 id="63">6.3 重标定四步法</h3>
+<p><strong>第 1 步 · 写清「收益来源」一句话</strong>（不能是"找好股票"）：</p>
+<ul>
+<li>洗盘拉升：「主力已控盘、洗盘充分、即将脱离成本区」</li>
+<li>超跌反转：「抛压枯竭、价格远离长期均值，存在回归动能」</li>
+</ul>
+<p><strong>这句话决定后面所有维度的正负号。</strong></p>
+<p><strong>第 2 步 · 每个维度定成「越大越好」</strong></p>
+<p>统一方向后加权求和才有意义（否则正负维度会互相抵消）。</p>
+<p><strong>第 3 步 · 只设「单侧阈值 + 线性映射」</strong></p>
+<pre><code class="language-js">const clamp = v =&gt; Math.max(0, Math.min(100, v));
+const linear = (v, zeroAt, fullAt) =&gt; clamp((v - zeroAt) / (fullAt - zeroAt) * 100);
+const shrink = linear(1 - volRatio20, 0, 0.5);     // 量比 1.0 → 0 分；≤0.5 → 满分
+</code></pre>
+<blockquote>
+<p>⚠ <strong>不要用多段阈值</strong>：分档会制造人为断点，同一只票差 0.01 就掉档，排序出现跳变。</p>
+</blockquote>
+<p><strong>第 4 步 · 权重按「收益来源的因果距离」分配</strong></p>
+<p>离收益来源越近的维度权重越高。若把「止损空间」设成 30%，模型会专挑
+「跌得浅但止损远」的票，<strong>与策略意图背离</strong>。</p>
+<h3 id="64">6.4 条件写法族（可直接组合）</h3>
+<table>
+<thead>
+<tr>
+<th>需求</th>
+<th>写法要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>连续 N 日上涨</td>
+<td><code>close[i] &gt; close[i-1]</code> <strong>且</strong> <code>pct_chg &gt; 0</code>（双条件，防除权日误判）</td>
+</tr>
+<tr>
+<td>累计涨幅</td>
+<td><code>(last.close - first.pre_close) / first.pre_close</code> —— <strong>用首日 <code>pre_close</code></strong>，否则少算第一天</td>
+</tr>
+<tr>
+<td>温和上涨</td>
+<td>连涨序列中<strong>排除涨停日</strong>，否则「≤7%」形同虚设</td>
+</tr>
+<tr>
+<td>缩量 / 放量</td>
+<td><code>近期均量 / 基准均量</code>，基准取 20 日</td>
+</tr>
+<tr>
+<td>均线粘合</td>
+<td><code>(max(MA5,MA10,MA20) - min(...)) / MA20 &lt; 阈值</code></td>
+</tr>
+<tr>
+<td>位置分位</td>
+<td><code>(现价 - 区间低) / (区间高 - 区间低)</code>；&lt;0.25 低位，&gt;0.75 高位</td>
+</tr>
+<tr>
+<td>换手排名</td>
+<td><strong>先</strong>全市场算和排序取前 N，<strong>再</strong>叠加其他条件。顺序反了会漏</td>
+</tr>
+<tr>
+<td>新高 / 新低</td>
+<td>注意 <code>&gt;=</code> 与严格 <code>&gt;</code> 会差一只</td>
+</tr>
+<tr>
+<td>上市天数</td>
+<td>窗口内<strong>记录数</strong>近似。<strong>不要</strong>拿首条记录日期当上市日</td>
+</tr>
+</tbody>
+</table>
+<h3 id="65">6.5 涨停判定的三种口径</h3>
+<pre><code class="language-js">// ① 用 close/pre_close 反推（最可靠，能处理 ST）
+pct = (close - pre_close) / pre_close * 100
+涨停 = pct &gt;= 阈值 - 容差
+
+// ② 直接用 pct_chg 字段（省事，除权日可能失真）
+
+// ③ 按板块推断阈值
+主板(60/000/001/002/003) 9.8% ｜ 创业/科创(30/68) 19.5%
+北交所(4/8/92) 29.5%       ｜ ST 4.7%
+</code></pre>
+<p><strong>容差 0.3% 不是可选项</strong> —— 四舍五入会让「9.99%」偶尔小于 10%。</p>
+<blockquote>
+<p>⚠ <strong>ST 的 5% 缩窄只发生在主板</strong>。创业板 / 科创板 ST <strong>仍是 20%</strong>。
+无条件套 <code>isST &amp;&amp; pct &gt;= 4.7</code> 会把创/科 ST 股 5% 的普通上涨<strong>误判为涨停</strong>，虚增涨停数。
+正确写法：<code>boardOf(code)==='main' &amp;&amp; isST(row) &amp;&amp; …</code></p>
+<p>⚠ <strong>上市 5 日内不限价</strong>，会把大涨幅误判为涨停。用 <code>minListDays ≥ 30</code> 自然规避。</p>
+</blockquote>
+<p><strong>排除 ST 要双验证</strong>：<code>is_st === true</code> <strong>且</strong>名称含 <code>ST</code>（历史记录里 <code>is_st</code> 偶有缺失）。</p>
+<h3 id="66">6.6 获利筹码近似</h3>
+<p>本地<strong>没有</strong>真实筹码分布，用<strong>成交量加权近似</strong>：</p>
+<pre><code>TP_i = (High+Low+Close)/3               典型价
+w_i  = 1 - (日龄/窗口) × 0.6            时间衰减 ← 不可省
+V_i  = Volume_i × w_i
+获利筹码 = Σ{V_i | TP_i ≤ 现价} / ΣV_i × 100%
+集中度   = 1 - 加权标准差 / 加权成本
+窗口     = 90 交易日
+</code></pre>
+<p><strong>三条纪律</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>纪律</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>必须加时间衰减</strong></td>
+<td>不加则单边上涨股恒 100%（银行/公用事业），排序失去区分度。<code>decay=0.6</code> 是实测甜点</td>
+</tr>
+<tr>
+<td><strong>必须标注为估算值</strong></td>
+<td>写进页面和报告的注释里</td>
+</tr>
+<tr>
+<td><strong>只做同时点横向排序</strong></td>
+<td>不可跨时点比较，不可当绝对买卖阈值</td>
+</tr>
+</tbody>
+</table>
+<p><strong>局限</strong>（要写进交付物）：无法识别同价位多次换手 → 高估长期横盘股；未单独处理送转除权。</p>
+<blockquote>
+<p>💡 <strong>何时该换真数据</strong>：局部需要精确筹码时，外接真实筹码分布数据源（含同价位换手叠加）。
+本技能的近似用于<strong>全市场粗筛</strong> —— 五万次近似计算在本地 0.1 秒完成，外接接口做不到。</p>
+</blockquote>
+<h3 id="67">6.7 ★ 排除类条件：先验证它「有没有在起作用」</h3>
+<p>排除条件比入选条件更容易<strong>静默失效</strong> —— 参数配了、流程跑通、有输出，<strong>但一只都没剔掉</strong>。</p>
+<p><strong>必做动作</strong>：每个排除条件都记数，跑完打印。</p>
+<pre><code class="language-js">const rejCnt = {};
+for (const r of rejected) for (const x of r.reasons) rejCnt[x] = (rejCnt[x]||0) + 1;
+console.log(Object.entries(rejCnt).map(([k,v]) =&gt; `${k}×${v}`).join(' / '));
+</code></pre>
+<p><strong>判别表</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>判断</th>
+<th>处置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>剔除数 = 0</td>
+<td>阈值与候选池分布<strong>完全不重叠</strong></td>
+<td>条件对本策略族不适用 → <strong>标注「未生效」</strong></td>
+</tr>
+<tr>
+<td>剔除数 ≈ 候选池全部</td>
+<td>阈值过松</td>
+<td>改分位法重定阈值</td>
+</tr>
+<tr>
+<td>剔除数 = 1~2</td>
+<td>阈值落在分布极端尾部</td>
+<td>改用<strong>分位法</strong></td>
+</tr>
+<tr>
+<td>剔除数 ≈ 候选池 10~30%</td>
+<td>健康</td>
+<td>保留</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实测教训</strong>（超跌反转，318 只候选）：</p>
+<table>
+<thead>
+<tr>
+<th>条件</th>
+<th>原设阈值</th>
+<th>实际剔除</th>
+<th>结症</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>获利盘 &gt; 70%</td>
+<td>70%</td>
+<td><strong>0 只</strong></td>
+<td>候选池获利盘中位仅 6.3%、最高 48.9% —— 深度破 MA120 的票持仓者几乎全亏</td>
+</tr>
+<tr>
+<td>筹码集中 &gt; 绝对阈值</td>
+<td>0.62</td>
+<td><strong>1 只</strong></td>
+<td><code>conc = 1-σ/μ</code> 实测分布压在 <strong>0.56~0.97、中位 0.89</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>❗ <strong>不许"偷偷放宽阈值凑数"。</strong> 用户给了「剔除获利盘 &gt; 70%」，实测一只不剔就改成 30%
+让它剔掉 45 只 —— <strong>用户会以为自己要的那条在过滤，实际逻辑已被换掉</strong>。
+正确做法：<strong>原样保留阈值</strong>，在报告/页面写「本批未触发 + 原因」，
+若要改口径，<strong>先向用户提议并确认</strong>。</p>
+</blockquote>
+<p><strong>σ 归一化类指标</strong>（<code>1-σ/μ</code>、变异系数、Sharpe、离散度）的阈值<strong>必须取当期分布分位</strong>
+（如 90 分位），<strong>不能拍绝对值</strong> —— 这类指标分布既被压缩、又逐期漂移。</p>
+<h3 id="68">6.8 ★★ 评分维度：先算「方差贡献」，别让权重变成摆设</h3>
+<p><strong>与 §6.7 是同一个病，但在加分侧</strong>：排除条件是「剔不掉任何东西」，
+评分维度是「<strong>几乎全员满分</strong>」—— 权重写了 30%，实际影响可能只有 1%。</p>
+<p><strong>交付前必做</strong>：对每个维度算 <strong>满分占比</strong> 与 <strong>对总分的方差贡献</strong>。</p>
+<pre><code class="language-js">const fullRate = rows.filter(r =&gt; r.scoreParts[k] === 100).length / rows.length;
+const share = varOf(rows.map(r =&gt; r.scoreParts['w' + K])) / varOf(rows.map(r =&gt; r.score));
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>健康区间</th>
+<th>危险信号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单维满分占比</td>
+<td>20% ~ 45%</td>
+<td><strong>&gt; 70%</strong> ⇒ 该维几乎无区分度</td>
+</tr>
+<tr>
+<td>单维方差贡献</td>
+<td>与权重同量级</td>
+<td><strong>&lt; 权重的 1/5</strong> ⇒ 权重是摆设</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实测</strong>（超跌反转，93 只命中，权重 缩量40 / 箱体30 / 获利盘30）：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>初版锚点（拍绝对值）</th>
+<th>满分占比</th>
+<th>方差贡献</th>
+<th>改分位锚点后</th>
+<th>改后贡献</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>缩量 40%</td>
+<td>量比 ≤ 0.50 满分</td>
+<td>71.0%</td>
+<td>62.3%</td>
+<td>41.9%</td>
+<td>77.2%</td>
+</tr>
+<tr>
+<td>箱体低位 30%</td>
+<td>天然 0~1，无需锚点</td>
+<td>3.2%</td>
+<td>51.0%</td>
+<td>3.2%</td>
+<td>5.4%</td>
+</tr>
+<tr>
+<td>获利盘 30%</td>
+<td>获利盘 ≤ 20% 满分</td>
+<td><strong>92.5%</strong></td>
+<td><strong>1.3%</strong> ← 摆设</td>
+<td>25.8%</td>
+<td>28.6%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>总分极差从 28.8 分拉开到 82.8 分。</strong></p>
+<p><strong>根因</strong>：命中池是<strong>已经被硬条件筛窄</strong>的子集。条件含「量创 20 日新低」→ 池内量比天然 &lt;0.5；
+含「深度破 MA120」→ 池内获利盘天然很低。
+<strong>在筛窄后的池里用「看起来正常」的绝对锚点 → 必然饱和。</strong></p>
+<p><strong>解法（照抄）</strong>：</p>
+<pre><code class="language-js">const qOf = (a, q) =&gt; { const s=[...a].sort((x,y)=&gt;x-y); return s[Math.floor(s.length*q)]; };
+const P = qOf(poolVolRatios, 0.25),  Z = qOf(poolVolRatios, 0.75);   // 缩量：25分位满分 / 75分位零分
+const CP = qOf(poolChips,      0.25), CZ = qOf(poolChips,      0.90); // 获利盘：25分位满分 / 90分位零分
+const lin = (v, full, zero) =&gt; Math.max(0, Math.min(100, (zero - v) / (zero - full) * 100));
+</code></pre>
+<p><strong>锚点要落盘到 <code>meta.scoring.anchors</code></strong>，让结果可复现、页面不用复刻算法。</p>
+<h3 id="69">6.9 排序主键 ≠ 评分：两者都要时怎么办</h3>
+<p>用户可能同时给两条看似冲突的要求：「按离 MA120 越远排序」+「缩量40/箱体30/获利盘30 评分」。
+<strong>不是二选一，是分主次</strong>：</p>
+<pre><code class="language-js">kept.sort((a, b) =&gt; (a.dev120 - b.dev120) || (b.score - a.score));
+//                   ↑ 主键：用户明示口径        ↑ 次键：同深度比质量
+</code></pre>
+<ul>
+<li><strong>已用作主排序键的因子不要再计进评分</strong>（否则同一含义被计两次 → 双重加权）；</li>
+<li>页面同时提供两种排序按钮，让用户能切换验证。</li>
+</ul>
+<h3 id="610">6.10 「零共振」是正常结果</h3>
+<p>不同条件刻画不同阶段：温和连涨 ↔ 高换手 ↔ 涨停基因，<strong>本就互斥</strong>。</p>
+<p>遇到零共振时：</p>
+<ol>
+<li>报告双条件共振清单（通常 20 只上下）；</li>
+<li>说明互斥原因；</li>
+<li>让用户自行选一条条件深挖。</li>
+</ol>
+<blockquote>
+<p><strong>不要为了凑数放宽条件。</strong> 这是策略特性，不是 bug。</p>
+</blockquote>
+<h3 id="611-cfg">6.11 CFG 参数调优经验</h3>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认</th>
+<th>调整方向</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>days</code>（连涨天数）</td>
+<td>3</td>
+<td>加大 → 更严格，命中骤减</td>
+</tr>
+<tr>
+<td><code>maxGain</code></td>
+<td>7</td>
+<td>「温和」的边界；&gt;10 会混入强势股</td>
+</tr>
+<tr>
+<td><code>minChip</code></td>
+<td>70~80</td>
+<td>70 是松筛，85+ 才是有区分度的紧筛</td>
+</tr>
+<tr>
+<td><code>chipWindow</code></td>
+<td>90</td>
+<td>短窗反映近期成本，长窗反映长期套牢盘</td>
+</tr>
+<tr>
+<td><code>decay</code></td>
+<td>0.6</td>
+<td>0=不衰减（不推荐），0.8=极重新近成交</td>
+</tr>
+<tr>
+<td><code>topN</code>（换手）</td>
+<td>100</td>
+<td>想更精可收到 50</td>
+</tr>
+<tr>
+<td><code>lookback</code>（涨停统计）</td>
+<td>90</td>
+<td>与 <code>DAYS</code> 联动</td>
+</tr>
+<tr>
+<td><code>minRecords</code></td>
+<td>130</td>
+<td>≥ 最长均线窗口 + 余量（用 MA120 ⇒ ≥130）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>🔍 <strong>调参副产品诊断</strong>：如果某条件<strong>恒命中 0 只</strong>或<strong>恒命中半个市场</strong>，多半是
+<strong>单位错</strong>（把「手」当「股」、把百分数当小数）或<strong>标的池没过滤</strong>。
+<strong>先查这两项，再去调阈值。</strong></p>
+</blockquote>
+<p><strong>窗口要够长</strong>：条件三要 90 日涨停统计，筹码要 90 日分布，洗盘形态要 90 日位置 ——
+<strong><code>DAYS=130</code> 是下限</strong>。想做年线类条件（如 250 日均线）需 <code>DAYS=300</code>。</p>
+<hr />
+<h2 id="7">第 7 章 做一块看板</h2>
+<h3 id="71-dom">7.1 六项能力（不是六块 DOM）</h3>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>作用</th>
+<th>缺失后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>条件卡（可点选）</td>
+<td>展示各条件命中数，点选过滤</td>
+<td>用户无法按条件下钻</td>
+</tr>
+<tr>
+<td>工具条（搜索/市值/导出）</td>
+<td>快速收窄</td>
+<td>结果多时无法定位</td>
+</tr>
+<tr>
+<td>统计条</td>
+<td>交易日 / 股票池 / 命中数 / 在线状态</td>
+<td>不知道数据新旧</td>
+</tr>
+<tr>
+<td>状态灯</td>
+<td>探测 7899 在线与否</td>
+<td>报错时不知是服务挂了还是没数据</td>
+</tr>
+<tr>
+<td><strong>结果浏览区</strong></td>
+<td>结果浏览</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>单股下钻区</strong></td>
+<td>单股下钻</td>
+<td>无法判断「为什么它入选」</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72">7.2 三种版式（都实测通过）</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>A. 表 + 抽屉</th>
+<th>B. 三栏工作台</th>
+<th>C. 多视图矩阵</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>结构</td>
+<td>顶部条件卡 + 宽主表 + 点行弹抽屉</td>
+<td>左控制台 + 中列表 + 右详情常驻</td>
+<td>顶部 Tab 切多视图 + 底部浮层</td>
+</tr>
+<tr>
+<td>DOM 锚点</td>
+<td><code>#tb</code> <code>#th</code> <code>#draw</code> <code>#mask</code></td>
+<td><code>#list</code> <code>#main</code></td>
+<td><code>#matrix</code> <code>#mBody</code> <code>#sheet</code></td>
+</tr>
+<tr>
+<td>适合</td>
+<td>结果 50–500 条、以"读单"为主</td>
+<td>结果 &lt;200 条、要反复调参、看分布</td>
+<td>想同时给多个切面 / 要解释"评分怎么来的"</td>
+</tr>
+<tr>
+<td>亮点</td>
+<td>排序稳、列多</td>
+<td>散点、烛台图、筹码直方图、键盘导航</td>
+<td>评分构成<strong>堆叠条</strong>、因子气泡、小多图剖面、组合篮子</td>
+</tr>
+<tr>
+<td>详情形态</td>
+<td>遮罩抽屉</td>
+<td>常驻右栏</td>
+<td>底部浮层（<code>translateY</code> 滑出）</td>
+</tr>
+<tr>
+<td>代价</td>
+<td>抽屉遮挡</td>
+<td>三栏窄屏会挤</td>
+<td>代码量大，需统一 <code>render()</code> 调度</td>
+</tr>
+</tbody>
+</table>
+<p><strong>从模板起手</strong>（即版式 A）：改 <code>scripts/build_dashboard.template.html</code>。
+<strong>想换版式</strong>：先列六项能力清单，再自定 DOM，最后跑 <code>selftest.js</code>。</p>
+<p><strong>版面铁律</strong>：</p>
+<ul>
+<li><strong>离线兜底是硬要求</strong> —— 默认加载 <code>./result.json.js</code>（注意带 <code>./</code>）注入的
+  <code>window.STRATEGY_RESULT</code>，7899 没开也能看；</li>
+<li><strong>单文件、零外部引用</strong> —— CSS/JS 全部内联，<strong>不引 CDN / ECharts</strong>。</li>
+</ul>
+<h3 id="73-7899">7.3 浏览器直连 7899 的三条注意</h3>
+<table>
+<thead>
+<tr>
+<th>注意</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>file://</code> 或同源托管</strong></td>
+<td><code>file://</code> 请求 <code>127.0.0.1</code> 属跨源，但 7899 不校验 CORS 头 → 实测可用</td>
+</tr>
+<tr>
+<td><strong>必须 <code>encodeURIComponent</code></strong></td>
+<td><code>日k</code> 是中文，不编码在部分环境会坏</td>
+</tr>
+<tr>
+<td><strong>实时重算用前缀法</strong></td>
+<td>全市场 = <strong>3 请求</strong>（<code>qz:0</code>/<code>qz:3</code>/<code>qz:6</code> 各带日期区间）。⚠ 「CHUNK=50 + 并发 6」是 v1 遗留，<strong>已作废</strong></td>
+</tr>
+</tbody>
+</table>
+<p>实时重算的筛选逻辑<strong>必须与 Node 引擎同口径</strong> —— <code>selftest.js</code> 第 4 组会自动校验。</p>
+<h3 id="74-svg">7.4 图表做法（无依赖 SVG）</h3>
+<p><strong>迷你走势</strong>：<code>polyline</code> + <code>polygon</code>（面积填充）。</p>
+<blockquote>
+<p>⚠ <strong><code>vector-effect="non-scaling-stroke"</code> 别漏</strong> —— <code>preserveAspectRatio="none"</code> 会把线宽
+横向拉伸成怪异粗细，加这个属性才正常。</p>
+</blockquote>
+<p><strong>烛台图</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>要点</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>坐标映射</td>
+<td>先用整段 <code>high/low</code> 求 <code>mn/mx</code> + 6% padding；<code>X(i)</code> <strong>按索引均分，不要按日期均分</strong>（停牌日会挤成一条缝）</td>
+</tr>
+<tr>
+<td>影线 + 实体</td>
+<td>影线 <code>&lt;line&gt;</code>；实体 <code>&lt;rect&gt;</code>，高度 <code>Math.max(1, abs(Y(o)-Y(c)))</code> → <strong>保证十字星也有 1px 可见</strong></td>
+</tr>
+<tr>
+<td>均线</td>
+<td>MA60 / MA120 各一条 <code>polyline</code>，<code>fill:none</code> + 虚线区分</td>
+</tr>
+<tr>
+<td>止损线</td>
+<td>一条横向虚线 + 价格标注</td>
+</tr>
+<tr>
+<td>轴文字</td>
+<td>只标首/末日期 + 最高/最低价</td>
+</tr>
+</tbody>
+</table>
+<p><strong>筹码成本分布直方图</strong>（最有说服力的图，<strong>优先加</strong>）：</p>
+<pre><code class="language-js">const w = 1 - (age / WIN) * 0.6;          // 与筹码近似同一套衰减
+bins[binIndex(TP)] += vol * w;
+</code></pre>
+<ul>
+<li>分箱数 <strong>30–40</strong>（如 34）：太多锯齿、太少糊成一团；</li>
+<li>现价<strong>左侧</strong> = 套牢盘、<strong>右侧</strong> = 获利盘，两色区分；</li>
+<li>叠加两条竖线：<strong>现价</strong>、<strong>加权平均成本</strong>。</li>
+</ul>
+<h3 id="75">7.5 交互与筛选</h3>
+<table>
+<thead>
+<tr>
+<th>交互</th>
+<th>实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>表头排序</td>
+<td>点击 <code>thead th</code> 切换 <code>sortKey</code>/<code>sortAsc</code>；<strong>数值与字符串分开比</strong></td>
+</tr>
+<tr>
+<td>行点击 → 详情</td>
+<td><code>tr[data-code]</code> → 打开详情 → 拉 K 线 → 画图</td>
+</tr>
+<tr>
+<td>导出 CSV</td>
+<td>加 <code>\ufeff</code> BOM（否则 Excel 中文乱码）+ 转义引号/逗号/换行</td>
+</tr>
+<tr>
+<td>键盘导航</td>
+<td>↑↓ 切上下只；<code>/</code> 聚焦搜索；Esc 关闭</td>
+</tr>
+<tr>
+<td>散点选中</td>
+<td>每个 <code>&lt;circle&gt;</code> 挂 <code>data-code</code>，点击同步列表与详情</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠ <strong>排序不要用默认字典序</strong>：<code>"100" &lt; "9"</code> 是字符串比较的经典坑。数值列显式 <code>Number()</code>。</p>
+</blockquote>
+<h3 id="76">7.6 配色与验证</h3>
+<table>
+<thead>
+<tr>
+<th>规则</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>涨红跌绿</strong></td>
+<td>中国股市惯例；<code>#ff4d4f</code> / <code>#3fb950</code>。<strong>不要用欧美配色</strong></td>
+</tr>
+<tr>
+<td>跟随宿主主题</td>
+<td>深色环境用深底浅字；浅色环境反转</td>
+</tr>
+<tr>
+<td><strong>颜色不要写成抽象 class</strong></td>
+<td>内联 <code>style</code> 或显式 fill，否则某些渲染器回落成黑色</td>
+</tr>
+<tr>
+<td>表头粘性</td>
+<td><code>thead th { position: sticky; top: 0 }</code> + 容器 <code>overflow: auto</code></td>
+</tr>
+<tr>
+<td>数字等宽</td>
+<td><code>font-family: Consolas, monospace</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>✅ <strong>交付前必须用无头浏览器截图确认图表真的画出来了。</strong>
+字段名错误（§4.5）不会报语法错，<code>node --check</code> 与自检<strong>都查不出</strong>。</p>
+<p><code>bash
+msedge --headless=new --disable-gpu --window-size=1500,1000 \
+  --virtual-time-budget=8000 --screenshot=shot.png "file:///&lt;abs-path&gt;.html"</code></p>
+</blockquote>
+<hr />
+<h2 id="8">第 8 章 脚本手册</h2>
+<h3 id="81">8.1 执行顺序</h3>
+<pre><code>fetch_all.js  （或 fetch_all.py，产出逐条一致）
+                    ↓
+            _cache/kline.json + _cache/_calendar.json
+                    ↓
+              screen.js → result.json + result.json.js
+                    ↓
+        ┌───────────┴───────────┐
+   make_report.js          build_dashboard.template.html
+        ↓                         ↓
+  筛选结果报告.md             策略看板.html
+                                  ↓
+                            selftest.js（校验页面与引擎一致）
+</code></pre>
+<h3 id="82-fetch_alljs-k">8.2 <code>fetch_all.js</code> — 全市场日 K 批量取数</h3>
+<table>
+<thead>
+<tr>
+<th>环境变量</th>
+<th>默认</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BASE</code></td>
+<td><code>http://127.0.0.1:7899</code></td>
+<td>服务地址</td>
+</tr>
+<tr>
+<td><code>OUT</code></td>
+<td><code>./_cache</code></td>
+<td>输出目录</td>
+</tr>
+<tr>
+<td><code>DAYS</code></td>
+<td><code>130</code></td>
+<td>取的交易日数（条件三需 ≥100）</td>
+</tr>
+<tr>
+<td><code>CAL_CODE</code></td>
+<td><code>000001</code></td>
+<td>用哪只票推导交易日历</td>
+</tr>
+<tr>
+<td><code>PREFIXES</code></td>
+<td><code>0*,3*,6*,920*</code></td>
+<td>股票段前缀。去掉 <code>920*</code> 即排除北交所</td>
+</tr>
+</tbody>
+</table>
+<p><strong>输出</strong>：<code>&lt;OUT&gt;/kline.json</code>、<code>&lt;OUT&gt;/_calendar.json</code></p>
+<p><code>kline.json</code> 每条的字段（<strong>短键</strong>，与接口全名不同）：</p>
+<pre><code>{d, c, pc, o, h, l, v, a, to, p, am, st, fsh, fmv, n}
+日期 收 前收 开 高 低 量 额 换手 涨跌幅 振幅 ST 流通股本 流通市值 名称
+</code></pre>
+<p><strong>性能</strong>：4 请求 / <strong>约 7 秒</strong> / 71.3 万条 / 股票池 5494 只</p>
+<p><strong>退出码</strong>：<code>3</code> = 读不到交易日历（7899 未就绪）；<code>1</code> = 股票池为空</p>
+<h3 id="83-fetch_allpy-python-sdk">8.3 <code>fetch_all.py</code> — Python SDK 等价版</h3>
+<p>与 js 版<strong>产出逐条一致</strong>（实测 5494 只 / 712,772 条 / 0 差异）。</p>
+<table>
+<thead>
+<tr>
+<th>环境变量</th>
+<th>默认</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PYBAO</code></td>
+<td>—</td>
+<td><code>pybao/</code> 绝对路径（或改用 <code>PYTHONPATH</code>）</td>
+</tr>
+<tr>
+<td><code>OUT</code> / <code>DAYS</code> / <code>CAL_CODE</code> / <code>PREFIXES</code></td>
+<td>同 js 版</td>
+<td>同上</td>
+</tr>
+</tbody>
+</table>
+<p><strong>退出码</strong>：<code>2</code> = 无法导入 <code>stock_sdk</code>；<code>3</code> = 无交易日历；<code>1</code> = 股票池为空</p>
+<h3 id="84-screenjs">8.4 <code>screen.js</code> — 筛选引擎模板</h3>
+<table>
+<thead>
+<tr>
+<th>环境变量</th>
+<th>默认</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CACHE</code></td>
+<td><code>./_cache/kline.json</code></td>
+<td>输入</td>
+</tr>
+<tr>
+<td><code>OUTDIR</code></td>
+<td>脚本所在目录</td>
+<td>输出目录</td>
+</tr>
+</tbody>
+</table>
+<p><strong>改 CFG 与条件段，不要改骨架。</strong></p>
+<p><strong>输出</strong>：<code>result.json</code>（完整）、<code>result.json.js</code>（<code>window.STRATEGY_RESULT=…</code>）</p>
+<p><strong>退出码</strong>：<code>2</code> = 找不到输入缓存</p>
+<p><strong><code>result.json</code> 结构</strong>：</p>
+<pre><code>{
+  meta:   { generatedAt, strategy, tradeDate, universe, funnel, chipMethod,
+            scoring, thresholds, tradePlan, note },
+  cfg:    { …全部 CFG 参数… },
+  hits:   [ …入选标的，含 scoreParts… ],
+  rejected: [ …被剔除标的，含 reasons… ],
+  counts: { passed, rejected, funnel }
+}
+</code></pre>
+<h3 id="85-make_reportjs-markdown">8.5 <code>make_report.js</code> — 生成 Markdown 报告</h3>
+<p>由 <code>result.json</code> 生成 <code>筛选结果报告.md</code>。无参数（读 <code>OUTDIR</code>）。</p>
+<blockquote>
+<p>⚠ 报告标题与小节文案<strong>内含「洗盘」字样</strong>，换策略后需一并改。
+数据读取部分是通用的。</p>
+</blockquote>
+<h3 id="86-selftestjs">8.6 <code>selftest.js</code> — 页面与引擎一致性自检</h3>
+<pre><code class="language-bash">node selftest.js                    # 校验目录内**全部**含 STRATEGY_RESULT 的页面
+node selftest.js 策略看板.html       # 只校验指定页面
+</code></pre>
+<p><strong>检查 10 组</strong>：DOM 契约 / 资源引用 / 协议用法 / 口径一致性 / 结果集字段 /
+排序单调性 / 条件口径回归 / 标的池纯度 / 板块覆盖（防误杀回归）/ 评分分解自洽</p>
+<p><strong>退出码</strong>：<code>0</code> = 全通过；<code>1</code> = 有失败项；<code>2</code> = 找不到页面。<strong>CI/交付前必须为 0。</strong></p>
+<p><strong>版式无关</strong>（重要）：页面骨架可自由重做，自检不会因此误报。</p>
+<table>
+<thead>
+<tr>
+<th>结构</th>
+<th>表格式</th>
+<th>工作台式</th>
+<th>矩阵式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>结果容器</td>
+<td><code>#tb</code></td>
+<td><code>#list</code></td>
+<td><code>#matrix</code> + <code>#mBody</code></td>
+</tr>
+<tr>
+<td>详情容器</td>
+<td><code>#draw</code> + <code>#mask</code></td>
+<td><code>#main</code></td>
+<td><code>#sheet</code></td>
+</tr>
+</tbody>
+</table>
+<p>其它宽容点：</p>
+<ul>
+<li><strong>计数容器</strong> 认 <code>#funnel</code> / <code>#cnt</code> / <code>#c1</code> 任一；</li>
+<li><strong>纯离线页跳过第 3 组</strong>（无 <code>qz:</code> 即视为不做实时重算）；</li>
+<li><strong>第 4 组</strong>：页面没复刻的 CFG 项<strong>直接跳过</strong>；</li>
+<li><strong>第 10 组</strong>：<strong>读 <code>meta.scoring.weights</code> 反算</strong>，不硬编码公式。</li>
+</ul>
+<blockquote>
+<p>❗ <strong>自检报「缺少 #xxx」时先判断是不是真的缺</strong> —— 如果你换了交互范式
+（如抽屉改常驻面板），<strong>改自检的判定条件，不要为了过测把页面改回旧结构</strong>。
+改完请<strong>同时跑旧页面</strong>确认没有回归。</p>
+<p>❗ <strong>自检不是万能的</strong>：它只做静态文本匹配，<strong>查不出运行时字段名错误</strong>（§4.5）。
+图表类改动务必再用无头浏览器截图确认。</p>
+</blockquote>
+<h3 id="87-build_dashboardtemplatehtml">8.7 <code>build_dashboard.template.html</code></h3>
+<p>非可执行资产。复制为 <code>策略看板.html</code> 后按需改标题、列、筛选器。
+<strong>依赖</strong>同目录的 <code>result.json.js</code>，两者一起拷走即可离线使用。</p>
+<hr />
+<h2 id="9">第 9 章 自检与交付</h2>
+<h3 id="91">9.1 交付前检查清单</h3>
+<ul>
+<li>[ ] 只走本地通道，<strong>没有</strong>误用在线接口（返回值不是「测试期…」字符串或 <code>{"error":…}</code>）</li>
+<li>[ ] 股票池覆盖五个板块段，<strong>没有</strong>整段被过滤规则误杀（<code>selftest.js</code> 第 9 组）</li>
+<li>[ ] 筹码口径在页面和报告里<strong>都标注为估算值</strong>，并说明只用于相对排序</li>
+<li>[ ] 涨跌色为<strong>红涨绿跌</strong></li>
+<li>[ ] 页面在 7899 <strong>离线</strong>时仍能打开（离线结果集兜底）</li>
+<li>[ ] 「实时重算」与 Node 引擎<strong>同口径</strong>（<code>selftest.js</code> 第 4 组）</li>
+<li>[ ] 共振数作主排序键</li>
+<li>[ ] 零共振/低命中时给出<strong>解释</strong>，不静默放宽条件</li>
+<li>[ ] 若是<strong>非洗盘类</strong>策略，评分维度与权重已<strong>重新标定</strong>（不是照抄）</li>
+<li>[ ] <strong>排除条件</strong>逐条打印了实际剔除数，失效的已标注「未生效」</li>
+<li>[ ] <strong>评分维度</strong>逐项算了满分占比与方差贡献，无维度饱和</li>
+<li>[ ] 评分锚点若为分位法，已写进 <code>meta.scoring.anchors</code> 可复现</li>
+<li>[ ] <strong>用无头浏览器截图确认图表真的画出来了</strong></li>
+<li>[ ] 交付物里的样例参数已标注为<strong>样例</strong>，非推荐</li>
+</ul>
+<h3 id="92">9.2 换族检查清单（换策略类型时额外过一遍）</h3>
+<ul>
+<li>[ ] 写出「收益来源」一句话，并据此定每个维度的<strong>正负号</strong></li>
+<li>[ ] 检查有没有维度<strong>与上一族方向相反</strong>（换手、均线状态最常翻）</li>
+<li>[ ] 所有维度统一成"越大越好"，再用 <code>clamp</code> + 线性映射计分</li>
+<li>[ ] 权重按「离收益来源的因果距离」分配，风控项不压过收益项</li>
+<li>[ ] <code>minRecords</code> ≥ 最长均线窗口 + 余量</li>
+<li>[ ] <strong>每个排除条件都打印实际剔除数</strong></li>
+<li>[ ] σ 归一化类阈值取<strong>当期分位</strong></li>
+<li>[ ] 失效/冗余条件在交付物里<strong>如实标注</strong>，不静默改造</li>
+<li>[ ] 排序主键与用户原话一致</li>
+<li>[ ] <code>selftest.js</code> 的口径一致性组已同步新 CFG</li>
+</ul>
+<hr />
+<h2 id="10">第 10 章 排错速查</h2>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>原因</th>
+<th>修法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SDK校验失败</code></td>
+<td>在用 JS 的 <code>gp.js</code></td>
+<td>改走裸 HTTP 或 Python <code>rd</code></td>
+</tr>
+<tr>
+<td>返回乱码</td>
+<td>漏 <code>&amp;json=1</code></td>
+<td>补参数</td>
+</tr>
+<tr>
+<td><code>[]</code> 空数组</td>
+<td>把通配符塞进了冒号链（<code>t=日k:*:D</code>）</td>
+<td>用 <code>k1=all:</code> / <code>k1=qz:6</code></td>
+</tr>
+<tr>
+<td><code>read ECONNRESET</code></td>
+<td>单请求代码数 &gt; ~50</td>
+<td>已无必要，改用前缀法</td>
+</tr>
+<tr>
+<td>返回值是「测试期超2000次…」</td>
+<td>误用<strong>在线接口</strong></td>
+<td>改回 <code>rd</code> 通道</td>
+</tr>
+<tr>
+<td>返回值是 <code>{"error":…}</code></td>
+<td>在线接口业务错误（<strong>不抛异常</strong>）</td>
+<td>同上；两种形态都要检</td>
+</tr>
+<tr>
+<td>Python 拿到数组不是 dict</td>
+<td>用了 <code>.vals()</code></td>
+<td>改用 <strong><code>.do()</code></strong></td>
+</tr>
+<tr>
+<td><code>import stock_sdk</code> 失败</td>
+<td><code>pybao</code> 不在路径</td>
+<td>设 <code>PYTHONPATH</code> / <code>PYBAO</code></td>
+</tr>
+<tr>
+<td><code>zb.get</code> 只出一天</td>
+<td>没传 <code>end</code>（默认只算 <code>20260302</code>）</td>
+<td>显式传 <code>start</code>/<code>end</code></td>
+</tr>
+<tr>
+<td><code>zb.get</code> 报列名错</td>
+<td>传了 <code>fields='a,b'</code> 的位置矩阵</td>
+<td>改 <code>fields=None</code></td>
+</tr>
+<tr>
+<td>结果榜首全是 ETF</td>
+<td>没过滤标的池</td>
+<td>见 §5.2</td>
+</tr>
+<tr>
+<td>某板块整段消失</td>
+<td>过滤正则误杀（如 <code>9[0-9]{5}</code>）</td>
+<td>见 §5.2；<code>selftest.js</code> 第 9 组会拦</td>
+</tr>
+<tr>
+<td><strong>策略池 = 0 只</strong></td>
+<td><strong>代码前缀正则加了 <code>$</code> 锚尾</strong></td>
+<td>去掉 <code>$</code>。见 §5.3</td>
+</tr>
+<tr>
+<td>筹码全是 100%</td>
+<td>没加时间衰减</td>
+<td>见 §6.6</td>
+</tr>
+<tr>
+<td>银行股排第一</td>
+<td>排序主键不是共振数</td>
+<td>见 §6.9</td>
+</tr>
+<tr>
+<td><strong>某评分维度全员满分</strong></td>
+<td><strong>绝对锚点饱和</strong></td>
+<td>改分位锚点。见 §6.8</td>
+</tr>
+<tr>
+<td><strong>图表显示 <code>undefined</code></strong></td>
+<td><strong>用了短键取具名对象字段</strong></td>
+<td>用 <code>pickf(r,'c','close')</code>。见 §4.5</td>
+</tr>
+<tr>
+<td><code>SyntaxError: Invalid regular expression flags</code></td>
+<td>块注释里写了 <code>*/</code></td>
+<td>注释里写前缀列表<strong>用顿号</strong>：<code>0*、3*、6*、920*</code></td>
+</tr>
+<tr>
+<td>取到未来日期</td>
+<td>数据库未更新</td>
+<td>先跑 <code>数据更新.exe</code></td>
+</tr>
+<tr>
+<td>端口连不上</td>
+<td><code>stockdb.exe</code> 没启动</td>
+<td>双击运行；端口写在 <code>stockdb.conf</code></td>
+</tr>
+<tr>
+<td>结果全空</td>
+<td>标的池过滤过头 或 阈值过严</td>
+<td>先查池，再查阈值</td>
+</tr>
+<tr>
+<td><code>selftest.js</code> 报口径不一致</td>
+<td>页面 <code>runScreen()</code> 与 <code>screen.js</code> 的 CFG 被改岔</td>
+<td>对齐参数</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="a">附录 A 踩坑全记录</h2>
+<p>这些是<strong>实际付出过代价</strong>的坑，按危害排序。</p>
+<h3 id="a1">A.1 三个高频既踩之坑</h3>
+<table>
+<thead>
+<tr>
+<th>坑</th>
+<th>症状</th>
+<th>纪律</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>*/</code> 写在 <code>/** */</code> 块注释里</strong></td>
+<td><code>SyntaxError: Invalid regular expression flags</code></td>
+<td>注释里写前缀列表<strong>一律用顿号</strong>：<code>0*、3*、6*、920*</code>。<strong>已在 <code>fetch_all.js</code>、<code>screen.js</code> 复发多次</strong></td>
+</tr>
+<tr>
+<td><strong>代码前缀正则加了 <code>$</code> 锚尾</strong></td>
+<td><code>/^(300\|301)$/</code> 匹配不到 <code>300001</code> → <strong>策略池整个变 0 只</strong></td>
+<td>前缀匹配<strong>绝不要 <code>$</code></strong>。池子为 0 时<strong>第一个怀疑这里</strong></td>
+</tr>
+<tr>
+<td><strong>σ 归一化类指标用绝对阈值</strong></td>
+<td>条件"配了但只剔掉 1 只" = 等于失效</td>
+<td>必须取<strong>当期候选池分位</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>💡 关于第二个坑的一个次生教训：<strong>单测时手工把正则抄一遍，漏了 <code>$</code> 反而"通过"，
+把自己误导了</strong> —— 单测要<strong>直接 import 生产函数</strong>，别手抄。</p>
+</blockquote>
+<h3 id="a2-90-95">A.2 标的池事故：<code>9[0-9]{5}</code> 误杀北交所</h3>
+<p>用 <code>9[0-9]{5}</code> 当黑名单，意图是拦 B 股，实际把 <strong>920xxx 北交所 308 只全杀了</strong>。</p>
+<ul>
+<li><code>9*</code> 段实测 308 只<strong>全是 920xxx</strong>，B 股 <strong>0 只</strong>；</li>
+<li>B 股的真实段位只有 <code>900xxx</code>；</li>
+<li>修复后命中数：C1 90→92、C2 47→46、双共振 20→19。</li>
+</ul>
+<p><strong>教训</strong>：黑名单要<strong>先用数据验证它拦的是什么</strong>，别无脑照抄。</p>
+<h3 id="a3-etf">A.3 ETF 霸榜</h3>
+<p>债券 ETF 特性（净值曲线平滑、做市商高频对倒、面值附近盘整）<strong>完美命中</strong>
+「温和上涨 + 高换手 + 高获利筹码」。修正：标的池过滤，两处都要加
+（<code>fetch_all.js</code> 落盘前 + <code>screen.js</code> 建池时）。</p>
+<p><strong>教训</strong>：stockdb 的 <code>日k</code> 表是「所有场内证券」的混合表。
+<strong>任何全市场策略的第一步都必须是标的池过滤。</strong></p>
+<h3 id="a4-100">A.4 筹码恒 100%</h3>
+<p>无衰减的成交量加权，在<strong>单边上涨</strong>的票上恒等于 100%（90 天里每天均价都低于今天收盘价）。</p>
+<p><strong>教训</strong>：任何"占比类"指标都要检查<strong>是否在某些形态下退化为常数</strong>。退化 = 无信息量。</p>
+<h3 id="a5">A.5 银行股排第一</h3>
+<p>洗盘形态五维（振幅收敛 / 缩量 / 均线粘合 / 位置 / 量能抬头）<strong>恰好奖励了"不波动"的票</strong>。
+银行股振幅小、缩量、均线贴合 → 形态分很高，但银行不可能"主力洗盘即将拉升"。</p>
+<p>修正：<strong>共振数设为排序主键</strong>。</p>
+<p><strong>教训</strong>：<strong>多指标加权打分前，先想清楚"什么情况必须排前面"</strong>，把它设成主键，
+而不是指望权重调参。纯加权模型容易被"某一维度极端高分"的样本劫持。</p>
+<h3 id="a6-30-1">A.6 维度饱和：写了 30% 权重，实际贡献 1%</h3>
+<p>见 §6.8。<strong>这是最隐蔽的一类问题</strong> —— 流程全通、结果非空、参数也配了，
+只有把<strong>分布量出来</strong>才会发现某个维度全员满分。</p>
+<p><strong>教训</strong>：<strong>权重是声明，方差贡献才是事实。</strong> 交付前必须量。</p>
+<h3 id="a7-bug">A.7 字段名事故：自检查不出的 bug</h3>
+<p>页面按 <code>r.c</code> 取收盘价，但 7899 返回的是 <code>close</code> → 图表显示 <code>undefined</code>，
+而 <code>node --check</code> 与 <code>selftest.js</code> <strong>全绿</strong>。</p>
+<p><strong>教训</strong>：<strong>静态检查查不出运行时字段名错。图表类改动必须截图验真。</strong></p>
+<h3 id="a8">A.8 自检本身也会误报</h3>
+<p>页面重做后自检报「缺少 <code>#xxx</code>」10 处，全部是<strong>测试自身的假设</strong>（旧 DOM id、
+旧前缀循环写法），不是页面缺陷。</p>
+<p><strong>教训</strong>：<strong>报"缺少 #xxx"先判断是不是真的缺</strong>，改自检的判定条件，
+不要为了过测把页面改回旧结构。<strong>但改完要同时跑旧页面确认无回归。</strong></p>
+<h3 id="a9">A.9 别把公式硬编码进自检</h3>
+<p>自检第 10 组原本写死 <code>deep*0.40 + shrink*0.22 + …</code>。
+换策略族后权重变了 → <strong>必然假失败</strong>。</p>
+<p><strong>修法</strong>：读 <code>meta.scoring.weights</code> 反算。</p>
+<hr />
+<h2 id="b">附录 B 权威文档与版本历史</h2>
+<h3 id="b1">B.1 权威参照（按可信度）</h3>
+<ol>
+<li><code>调用方式/python/AI策略python开发接口文档.md</code>（1672 行）—— <strong>最权威</strong>，本技能大部分结论以此为准</li>
+<li><code>调用方式/http/rd_test.py</code>、<code>调用方式/python/rd_test.py</code> —— 官方语法字典</li>
+<li><code>调用方式/ai_自动开发文档/AI策略界面开发纯js接口文档.md</code> —— JS 侧规则与口径歧义清单</li>
+<li><code>调用方式/ai_mcp/</code> —— MCP 服务（41 工具，<strong>多数包在线接口</strong>）</li>
+</ol>
+<h3 id="b2">B.2 官方硬规则摘要</h3>
+<ul>
+<li>日 K / 分钟 K 必须写全三层键；</li>
+<li><code>"all"</code> 不是通配符（用 <code>"*"</code>）；</li>
+<li>大范围用前缀让服务器筛，<strong>不得循环逐股</strong>；</li>
+<li>复权 / 周月 K / 分钟聚合<strong>必须</strong>用 <code>rd.get_data()</code>；</li>
+<li>投影与切片在服务端做；</li>
+<li>在线接口只做单标的小数据补充；</li>
+<li>私有数据写 <code>./mydb</code>。</li>
+</ul>
+<h3 id="b3">B.3 已知文档缺陷（上游）</h3>
+<ul>
+<li><code>ai_mcp/README.md</code> 写的文件名 <code>stock_mcp_server.py</code> 是<strong>错的</strong>（实际 <code>stockdb_full_mcp.py</code>）</li>
+<li><code>python/调用.txt</code> 提到的 <code>http_js.js</code> <strong>不存在</strong></li>
+</ul>
+<h3 id="b4">B.4 技能版本历史</h3>
+<table>
+<thead>
+<tr>
+<th>版本</th>
+<th>变更</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2.0.0</td>
+<td>首版创建，沉淀自 tick-stock-panel 部署后的 stockdb 策略开发实践</td>
+</tr>
+<tr>
+<td>2.1.x</td>
+<td>按官方 Python 文档全面核对校正；前缀×区间取代 v2 方案；修 <code>9[0-9]{5}</code> 误杀北交所、ST 5% 缩窄仅限主板</td>
+</tr>
+<tr>
+<td>2.2.0</td>
+<td>SKILL.md 重构为「运行时路由器」；术语统一为「在线接口」</td>
+</tr>
+<tr>
+<td>2.3.0</td>
+<td>新增 <code>strategy-variants.md</code>（换策略族重标定）；新增 §0.1 三个高频坑、§5.4 排除条件静默失效</td>
+</tr>
+<tr>
+<td>2.3.1</td>
+<td>明确「技能不含写死策略」的边界（§1.1）</td>
+</tr>
+<tr>
+<td>2.3.2</td>
+<td><code>dashboard-recipe.md</code> 承认两种版式；新增烛台图、筹码直方图做法；自检版式无关化 + 多页面</td>
+</tr>
+<tr>
+<td><strong>2.4.0</strong></td>
+<td>新增 <strong>§5.5 评分维度方差贡献体检</strong>、<strong>§5.6 排序主键≠评分</strong>；版式扩到三选一；<code>protocol.md</code> 新增日k 字段表 + 截图验证法；自检支持三版式、权重反算、纯离线页跳过协议组；<strong>本说明书</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="b5">B.5 本说明书覆盖的文件地图</h3>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SKILL.md</code></td>
+<td><strong>给 agent 的运行时路由</strong>（只放必须当场知道的决策信息）</td>
+</tr>
+<tr>
+<td><strong><code>使用说明书.md</code> / <code>.html</code></strong></td>
+<td><strong>给人的完整手册</strong>（本文件）</td>
+</tr>
+<tr>
+<td><code>references/protocol.md</code></td>
+<td>取数协议细节</td>
+</tr>
+<tr>
+<td><code>references/screening-cookbook.md</code></td>
+<td>选股条件与评分手册</td>
+</tr>
+<tr>
+<td><code>references/strategy-variants.md</code></td>
+<td>换策略族重标定指南</td>
+</tr>
+<tr>
+<td><code>references/worked-example.md</code></td>
+<td>完整实例（三条件·洗盘拉升）</td>
+</tr>
+<tr>
+<td><code>references/dashboard-recipe.md</code></td>
+<td>看板页面配方</td>
+</tr>
+<tr>
+<td><code>scripts/README.md</code></td>
+<td>脚本参数与契约</td>
+</tr>
+<tr>
+<td><code>SOURCES.md</code></td>
+<td>结论出处与验证过程</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>本说明书与 <code>SKILL.md</code> 同步维护。若两者冲突，以 <code>SKILL.md</code> 为准（它是运行时权威）。</em></p>
+    </article>
+  </main>
+</div>
+
+<button id="totop" title="回到顶部">↑</button>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+
+/* ───────── 引用块按语义着色 ───────── */
+document.querySelectorAll('#doc blockquote').forEach((b) => {
+  const t = b.textContent;
+  if (/❗|❌|严禁|绝不能|不要用|已被换掉/.test(t)) b.classList.add('danger');
+  else if (/⚠|陷阱|注意|警告/.test(t)) b.classList.add('warn');
+  else if (/✅|💡|👉|📌|🔍|💬/.test(t)) b.classList.add('ok');
+});
+
+/* ───────── 代码块：注释行淡显 ───────── */
+document.querySelectorAll('#doc pre code').forEach((c) => {
+  c.innerHTML = c.innerHTML.replace(
+    /(^|\n)(\s*(?:\/\/|#)\s[^\n]*)/g,
+    (m, br, cmt) => br + '<span class="cmt">' + cmt + '</span>'
+  );
+});
+
+/* ───────── 滚动高亮（scroll-spy） ───────── */
+const links = [...document.querySelectorAll('#toc a')];
+const byId = new Map(links.map((a) => [decodeURIComponent(a.getAttribute('href').slice(1)), a]));
+const heads = [...document.querySelectorAll('#doc h2[id], #doc h3[id]')];
+
+let ticking = false;
+function spy() {
+  ticking = false;
+  const y = window.scrollY + 90;
+  let cur = null;
+  for (const h of heads) { if (h.offsetTop <= y) cur = h.id; else break; }
+  links.forEach((a) => a.classList.remove('on'));
+  if (cur && byId.has(cur)) {
+    const a = byId.get(cur);
+    a.classList.add('on');
+    const box = $('#side');
+    const r = a.getBoundingClientRect(), br = box.getBoundingClientRect();
+    if (r.top < br.top + 20 || r.bottom > br.bottom - 20) {
+      box.scrollTop += r.top - br.top - box.clientHeight / 2.6;
+    }
+  }
+  $('#totop').classList.toggle('on', window.scrollY > 500);
+}
+window.addEventListener('scroll', () => {
+  if (!ticking) { ticking = true; requestAnimationFrame(spy); }
+}, { passive: true });
+
+/* ───────── 搜索：过滤目录 + 只显示命中章节 + 正文高亮 ───────── */
+const RAW = document.body.innerHTML;           // 未高亮的原始状态
+const secs = [...document.querySelectorAll('#doc h2[id]')].map((h) => {
+  const nodes = [h];
+  let n = h.nextElementSibling;
+  while (n && n.tagName !== 'H2') { nodes.push(n); n = n.nextElementSibling; }
+  return { head: h, nodes, text: nodes.map((x) => x.textContent).join(' ').toLowerCase() };
+});
+
+let clearTimer = null;
+function doSearch(rawQ) {
+  const q = rawQ.trim().toLowerCase();
+  $('#clr').style.display = q ? 'block' : 'none';
+
+  // 1) 还原上一次的高亮
+  if (document.querySelector('#doc mark.hit')) {
+    document.querySelectorAll('#doc mark.hit').forEach((m) => {
+      const p = m.parentNode; p.replaceChild(document.createTextNode(m.textContent), m); p.normalize();
+    });
+  }
+
+  if (!q) {
+    secs.forEach((s) => s.nodes.forEach((n) => n.classList.remove('sec-off')));
+    links.forEach((a) => a.classList.remove('hide'));
+    $('#toc').querySelectorAll('li').forEach((li) => (li.style.display = ''));
+    $('#hits').textContent = '';
+    document.querySelectorAll('#doc h2[id]').forEach((h) => h.classList.remove('sec-off'));
+    return;
+  }
+
+  // 2) 章节级显隐
+  let hit = 0;
+  secs.forEach((s) => {
+    const ok = s.text.includes(q);
+    if (ok) hit++;
+    s.nodes.forEach((n) => n.classList.toggle('sec-off', !ok));
+  });
+  $('#hits').textContent = hit ? hit + ' 章命中' : '无命中';
+
+  // 3) 目录同步：只留命中的章（及其子项）
+  const keep = new Set(secs.filter((s) => !s.nodes[0].classList.contains('sec-off')).map((s) => s.head.id));
+  document.querySelectorAll('#toc > ul > li').forEach((li) => {
+    const a = li.querySelector('a');
+    const id = a ? decodeURIComponent(a.getAttribute('href').slice(1)) : '';
+    li.style.display = keep.has(id) ? '' : 'none';
+  });
+
+  // 4) 正文高亮（在可见章节内）
+  const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  secs.filter((s) => !s.nodes[0].classList.contains('sec-off')).forEach((s) => {
+    s.nodes.forEach((node) => {
+      if (node.tagName === 'PRE' || node.tagName === 'TABLE') return;   // 代码/表格不破坏结构
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      const targets = [];
+      let n;
+      while ((n = walker.nextNode())) {
+        if (n.nodeValue.toLowerCase().includes(q) && n.parentNode.tagName !== 'MARK') targets.push(n);
+      }
+      targets.forEach((t) => {
+        const frag = document.createDocumentFragment();
+        let last = 0, s2;
+        re.lastIndex = 0;
+        while ((s2 = re.exec(t.nodeValue))) {
+          if (s2.index > last) frag.appendChild(document.createTextNode(t.nodeValue.slice(last, s2.index)));
+          const m = document.createElement('mark');
+          m.className = 'hit'; m.textContent = s2[0];
+          frag.appendChild(m);
+          last = s2.index + s2[0].length;
+          if (s2.index === re.lastIndex) re.lastIndex++;
+        }
+        if (last < t.nodeValue.length) frag.appendChild(document.createTextNode(t.nodeValue.slice(last)));
+        t.parentNode.replaceChild(frag, t);
+      });
+    });
+  });
+
+  // 5) 滚到第一个命中章节
+  const first = secs.find((s) => !s.nodes[0].classList.contains('sec-off'));
+  if (first) window.scrollTo({ top: first.head.offsetTop - 70, behavior: 'auto' });
+}
+
+$('#q').addEventListener('input', (e) => {
+  clearTimeout(clearTimer);
+  const v = e.target.value;
+  clearTimer = setTimeout(() => doSearch(v), 110);
+});
+$('#clr').onclick = () => { $('#q').value = ''; doSearch(''); $('#q').focus(); };
+
+/* ───────── 键盘 ───────── */
+document.addEventListener('keydown', (e) => {
+  const typing = /INPUT|TEXTAREA/.test(document.activeElement.tagName);
+  if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault(); $('#q').focus(); $('#q').select();
+  } else if (e.key === 'Escape') {
+    if (typing) { $('#q').value = ''; doSearch(''); $('#q').blur(); }
+  } else if (!typing && (e.key === 'g' || e.key === 'G')) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (!typing && (e.key === 'j' || e.key === 'J' || e.key === 'ArrowDown' && e.altKey)) {
+    jump(1);
+  } else if (!typing && (e.key === 'k' && !e.metaKey && !e.ctrlKey)) {
+    jump(-1);
+  }
+});
+function jump(dir) {
+  const vis = heads.filter((h) => !h.classList.contains('sec-off'));
+  const y = window.scrollY + 100;
+  let i = vis.findIndex((h) => h.offsetTop > y);
+  if (i === -1) i = vis.length;
+  const t = vis[Math.max(0, Math.min(vis.length - 1, i + (dir > 0 ? 0 : -1)))];
+  if (t) window.scrollTo({ top: t.offsetTop - 70, behavior: 'smooth' });
+}
+
+/* ───────── 回到顶部 ───────── */
+$('#totop').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+spy();
+</script>
+</body>
+</html>
